@@ -4,13 +4,13 @@
 
     <key name="open-router-api-key" type="s">
         <default>"Input your key here"</default>
-        <summary>Open Router Key</summary>
-        <description>Add the Open Router Key in order to use this extension</description>
+        <summary>Anthropic API Key</summary>
+        <description>Add your Anthropic API Key to use this extension</description>
     </key>
     <key name="llm-model" type="s">
-        <default>"meta-llama/llama-3.1-8b-instruct:free"</default>
-        <summary>LLM model from Open Router</summary>
-        <description>LLM model for prompting</description>
+        <default>"claude-3-sonnet-20240229"</default>
+        <summary>Anthropic Model</summary>
+        <description>Anthropic model to use for chat</description>
     </key>
     <key name="history" type="s">
         <default>"[]"</default>

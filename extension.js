@@ -1,5 +1,5 @@
 // Made by @martijara
-
+// Edited by @neonpegasu5
 
 // Importing necessary libraries
 import GObject from 'gi://GObject';
@@ -16,15 +16,15 @@ import {convertMD} from "./md2pango.js";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 
-// Defining necessary variables (OpenRouter API)
-let OPENROUTER_API_KEY = "";
-let OPENROUTER_CHABOT_MODEL = ""; 
+// Defining necessary variables (Anthropic API)
+let ANTHROPIC_API_KEY = "";
+let ANTHROPIC_MODEL = ""; 
 let HISTORY = [];
 let BACKGROUND_COLOR_HUMAN_MESSAGE = "";
 let BACKGROUND_COLOR_LLM_MESSAGE = "";
 let COLOR_HUMAN_MESSAGE = "";
 let COLOR_LLM_MESSAGE = ""
-let url = `https://openrouter.ai/api/v1/chat/completions`;
+let url = `https://api.anthropic.com/v1/messages`;
 
 
 
@@ -43,16 +43,16 @@ class Penguin extends PanelMenu.Button
 
     _fetchSettings () {
         const { settings } = this.extension;
-        OPENROUTER_API_KEY           = settings.get_string("open-router-api-key");
-        OPENROUTER_CHABOT_MODEL          = settings.get_string("llm-model");
+        ANTHROPIC_API_KEY = settings.get_string("open-router-api-key");
+        ANTHROPIC_MODEL = settings.get_string("llm-model");
 
-        BACKGROUND_COLOR_HUMAN_MESSAGE      = settings.get_string("human-message-color");
-        BACKGROUND_COLOR_LLM_MESSAGE       = settings.get_string("llm-message-color");
+        BACKGROUND_COLOR_HUMAN_MESSAGE = settings.get_string("human-message-color");
+        BACKGROUND_COLOR_LLM_MESSAGE = settings.get_string("llm-message-color");
 
-        COLOR_HUMAN_MESSAGE      = settings.get_string("human-message-text-color");
-        COLOR_LLM_MESSAGE       = settings.get_string("llm-message-text-color");
+        COLOR_HUMAN_MESSAGE = settings.get_string("human-message-text-color");
+        COLOR_LLM_MESSAGE = settings.get_string("llm-message-text-color");
 
-        HISTORY           = JSON.parse(settings.get_string("history"));
+        HISTORY = JSON.parse(settings.get_string("history"));
     }
 
     _init(extension) {
@@ -221,132 +221,71 @@ class Penguin extends PanelMenu.Button
         let message = Soup.Message.new('POST', url);
         
         message.request_headers.append(
-                'Authorization',
-                `Bearer ${OPENROUTER_API_KEY}`
-        )
+            'x-api-key',
+            ANTHROPIC_API_KEY
+        );
+        message.request_headers.append(
+            'anthropic-version',
+            '2023-06-01'
+        );
+        message.request_headers.append(
+            'content-type',
+            'application/json'
+        );
 
+        // Convert history format to Anthropic format
+        let anthropicMessages = this.history.map(msg => ({
+            role: msg.role === "user" ? "user" : "assistant",
+            content: msg.content
+        }));
 
-        let body = JSON.stringify({"model": OPENROUTER_CHABOT_MODEL, "messages": this.history});
-        let bytes  = GLib.Bytes.new(body);
-
-
-        message.set_request_body_from_bytes('application/json', bytes);
-
-        this.timeoutResponse = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 90, () => { 
-            if (this.chatInput.get_text() == "I am Thinking...") {
-                let response = "Ah! Bad internet moments. They help to reconnect with the world around us. But they also make us frustrated. Are we addicts in this new surveillance society? Or are we just trying to get answers?";
-
-                this.initializeTextBox('llmMessage', response, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-                this.chatInput.set_reactive(true)
-                this.chatInput.set_text("")
-
-                if (this.timeoutResponse) {
-                    GLib.Source.remove(this.timeoutResponse);
-                    this.timeoutResponse = null;
-                }
-
-                return;
-            }
-            else {
-                if (this.timeoutResponse) {
-                    GLib.Source.remove(this.timeoutResponse);
-                    this.timeoutResponse = null;
-                }
-
-                return;
-            }
-            });
+        let body = JSON.stringify({
+            "model": ANTHROPIC_MODEL,
+            "messages": anthropicMessages,
+            "max_tokens": 1024
+        });
+        let bytes = GLib.Bytes.new(body);
 
         message.set_request_body_from_bytes('application/json', bytes);
-        this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (_httpSession, result) => {
-            let bytes = _httpSession.send_and_read_finish(result);
-            let decoder = new TextDecoder('utf-8');
-            let response = decoder.decode(bytes.get_data());
-            let res = JSON.parse(response);
-    
-            if (res.error?.code == 401) {
-                let response = "Hmm... It seems like your API key is not present or is incorrect. You can type it in the extension settings. Click below to enter your API key and view the guide on how to get one.";
 
-                let final = convertMD(response);
-                this.initializeTextBox('llmMessage', final, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
+        this._httpSession.send_and_read_async(
+            message,
+            GLib.PRIORITY_DEFAULT,
+            null,
+            (session, result) => {
+                try {
+                    if (message.get_status() === Soup.Status.OK) {
+                        const bytes = session.send_and_read_finish(result);
+                        const decoder = new TextDecoder('utf-8');
+                        const response = JSON.parse(decoder.decode(bytes.get_data()));
+                        
+                        const assistantMessage = response.content[0].text;
+                        this.history.push({
+                            "role": "assistant",
+                            "content": assistantMessage
+                        });
 
-                let settingsButton = new St.Button({
-                    label: "Click here to set up your API for connecting to the chatbot", can_focus: true,  toggle_mode: true
-                });
-                    
-                settingsButton.connect('clicked', (self) => {
-                    this.openSettings();
-                });
-    
-                this.chatBox.add_child(settingsButton)
-    
-                this.chatInput.set_reactive(true)
-                this.chatInput.set_text("")
-                return;
-            }
-            if (res.error?.code == 429) {
-                let response = "You have ran out of credits. That's unfortunate! You can create another OpenRouter.ai account with a new API Key, or purchase more credits. If you are a free user, this issue will be fixed in the upcoming updates with more service options";
+                        this.initializeTextBox('llmMessage', convertMD(assistantMessage), BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
+                        
+                        // Save updated history
+                        const { settings } = this.extension;
+                        settings.set_string("history", JSON.stringify(this.history));
+                    } else {
+                        let errorMessage = "Sorry, I encountered an error. Please check your API key and try again.";
+                        this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
+                    }
+                } catch (error) {
+                    let errorMessage = "An error occurred while processing the response.";
+                    this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
+                    logError(error);
+                }
 
-                let final = convertMD(response);
-                this.initializeTextBox('llmMessage', final, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-
-                let settingsButton = new St.Button({
-                    label: "Click here for help creating a new account and key", can_focus: true,  toggle_mode: true
-                });
-                    
-                settingsButton.connect('clicked', (self) => {
-                    this.openSettings();
-                });
-    
-                this.chatBox.add_child(settingsButton)
-    
-                this.chatInput.set_reactive(true)
-                this.chatInput.set_text("")
-                return;
-            }
-
-            if (res.error?.code != 401 && res.error?.code != 429 && res.error !== undefined){
-                let response = "Oh no! It seems like the LLM model you entered is either down or not correct. Make sure you didn't make any errors when inputting it in the settings. You can always use the default extension model (sent in the next message). Check your connection either way";
-    
-                this.initializeTextBox('llmMessage', response, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-                this.initializeTextBox('llmMessage', "meta-llama/llama-3.1-8b-instruct:free", BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-    
-                let settingsButton = new St.Button({
-                    label: "Click here to check or change your model ID", can_focus: true,  toggle_mode: true
-                });
-            
-                settingsButton.connect('clicked', (self) => {
-                    this.openSettings();
-                });
-    
-                this.chatBox.add_child(settingsButton)
-    
-                this.chatInput.set_reactive(true)
-                this.chatInput.set_text("")
-
-                return;
-            }
-            else {
-                let response = res.choices[0].message.content;
-                    
-                let final = convertMD(response);
-                this.initializeTextBox('llmMessage', final, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-    
-                // Add input to chat history
-                this.history.push({
-                    "role": "assistant",
-                    "content": response
-                });
-
-                const { settings } = this.extension;
-                settings.set_string("history", JSON.stringify(this.history));
-    
                 this.chatInput.set_reactive(true);
                 this.chatInput.set_text("");
-
-                return;
             }
-        });
+        );
+
+        return;
     }
 
     initializeTextBox(type, text, color, textColor) {

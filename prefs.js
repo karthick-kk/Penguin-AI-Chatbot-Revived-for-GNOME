@@ -1,4 +1,5 @@
 // Made by @martijara 
+// Edited by @neonpegasu5
 
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
@@ -42,7 +43,7 @@ class Settings {
 
         // API Key Section
         const labelAPI = new Gtk.Label({
-            label: _("OpenRouter API Key"),
+            label: _("Anthropic API Key"),
             halign: Gtk.Align.START
         });
         const apiKey = new Gtk.Entry({
@@ -51,21 +52,21 @@ class Settings {
         
         const howToAPI = new Gtk.LinkButton({
             label: _("How to get API key?"),
-            uri: 'https://martijara.gitlab.io/Penguin-AI-Chatbot-for-GNOME/'
+            uri: 'https://console.anthropic.com/account/keys'
         });
 
 
         // LLM Model Section
         const labelModel = new Gtk.Label({
-            label: _("LLM model you want to use"),
+            label: _("Anthropic Model"),
             halign: Gtk.Align.START
         });
         const model = new Gtk.Entry({
             buffer: new Gtk.EntryBuffer()
         });
         const howToModel = new Gtk.LinkButton({
-            label: _("List of models"),
-            uri: 'https://openrouter.ai/docs/models'
+            label: _("Available Models"),
+            uri: 'https://docs.anthropic.com/claude/docs/models-overview'
         });
 
 
