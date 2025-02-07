@@ -2,10 +2,6 @@
 
 An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI, and Gemini.
 
-> ### **Disclaimer:**
->
-> This is a fork by [@esauvisky](https://github.com/esauvisky) of a project originally created by [@martijara](https://gitlab.com/martijara) and further developed by [@neonpegasu5](https://github.com/neonpegasu5).
-> This introduces multi-LLM provider support, keyboard shortcuts, and ongoing enhancements. More features are planned for the future.
 >
 > ### **TODO**:
 >
@@ -78,7 +74,3 @@ You can now use the extension! Open the chat window by clicking the Penguin icon
 
 ![Screenshot of Penguin as a GNOME Shell Extension](public/screenshot.png)
 ![Screenshot of Penguin as a GNOME Shell Extension](public/fullscreen.png)
-
-# Original Project
-
-This is a fork of [Penguin-AI-Chatbot-for-GNOME](https://gitlab.com/martijara/Penguin-AI-Chatbot-for-GNOME).
