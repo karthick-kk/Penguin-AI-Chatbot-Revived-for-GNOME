@@ -2,40 +2,65 @@
   <schema id="org.gnome.shell.extensions.penguin-ai-chatbot"
       path="/org/gnome/shell/extensions/penguin-ai-chatbot/">
 
-    <key name="open-router-api-key" type="s">
-        <default>"Input your key here"</default>
+    <key name="llm-provider" type="s">
+        <default>"anthropic"</default>
+        <summary>LLM Provider</summary>
+        <description>Choose the Large Language Model (LLM) provider for the chatbot.</description>
+    </key>
+    <key name="anthropic-api-key" type="s">
+        <default>""</default>
         <summary>Anthropic API Key</summary>
-        <description>Add your Anthropic API Key to use this extension</description>
+        <description>Your Anthropic API key. Required to use Anthropic models.</description>
+    </key>
+    <key name="openai-api-key" type="s">
+        <default>""</default>
+        <summary>OpenAI API Key</summary>
+        <description>Your OpenAI API key. Required to use OpenAI models.</description>
+    </key>
+    <key name="gemini-api-key" type="s">
+        <default>""</default>
+        <summary>Gemini API Key</summary>
+        <description>Your Gemini API key. Required to use Gemini models.</description>
     </key>
     <key name="llm-model" type="s">
         <default>"claude-3-sonnet-20240229"</default>
         <summary>Anthropic Model</summary>
-        <description>Anthropic model to use for chat</description>
+        <description>The Anthropic model to use for chat.</description>
+    </key>
+    <key name="openai-model" type="s">
+        <default>"gpt-4o"</default>
+        <summary>OpenAI Model</summary>
+        <description>The OpenAI model to use for chat.</description>
+    </key>
+    <key name="gemini-model" type="s">
+        <default>"gemini-2.0-flash"</default>
+        <summary>Gemini Model</summary>
+        <description>The Gemini model to use for chat.</description>
     </key>
     <key name="history" type="s">
         <default>"[]"</default>
         <summary>Chat History</summary>
-        <description>Saving chat history as JSON.Stringify</description>
+        <description>Stores the chat history as a JSON string.</description>
     </key>
     <key name="human-message-color" type="s">
         <default>"rgb(0, 106, 255)"</default>
-        <summary>Background Color of Human Message</summary>
-        <description>Customizing</description>
+        <summary>Your Message Background Color</summary>
+        <description>The background color for your messages.</description>
     </key>
     <key name="llm-message-color" type="s">
         <default>"rgb(96,99,102)"</default>
-        <summary>Background Color of LLM message</summary>
-        <description>Customizing</description>
+        <summary>Chatbot Message Background Color</summary>
+        <description>The background color for the chatbot's messages.</description>
     </key>
     <key name="llm-message-text-color" type="s">
         <default>"rgb(255,255,255)"</default>
-        <summary>Text Color of LLM message</summary>
-        <description>Customizing</description>
+        <summary>Chatbot Message Text Color</summary>
+        <description>The text color for the chatbot's messages.</description>
     </key>
     <key name="human-message-text-color" type="s">
         <default>"rgb(255,255,255)"</default>
-        <summary>Text Color of Human message</summary>
-        <description>Customizing</description>
+        <summary>Your Message Text Color</summary>
+        <description>The text color for your messages.</description>
     </key>
   </schema>
 </schemalist>

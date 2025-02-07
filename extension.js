@@ -16,24 +16,29 @@ import {convertMD} from "./md2pango.js";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 
-// Defining necessary variables (Anthropic API)
+// Defining necessary variables (LLM API)
+let LLM_PROVIDER = "";
 let ANTHROPIC_API_KEY = "";
-let ANTHROPIC_MODEL = ""; 
+let OPENAI_API_KEY = "";
+let GEMINI_API_KEY = "";
+let LLM_MODEL = "";
+let OPENAI_MODEL = "";
+let GEMINI_MODEL = "";
 let HISTORY = [];
 let BACKGROUND_COLOR_HUMAN_MESSAGE = "";
 let BACKGROUND_COLOR_LLM_MESSAGE = "";
 let COLOR_HUMAN_MESSAGE = "";
 let COLOR_LLM_MESSAGE = ""
-let url = `https://api.anthropic.com/v1/messages`;
+let url = ""; // Placeholder, will be set dynamically
 
 
 
 // Class that activates the extension
 const Penguin = GObject.registerClass(
-class Penguin extends PanelMenu.Button 
+class Penguin extends PanelMenu.Button
 {
-    
-    
+
+
     _loadSettings () {
         this._settingsChangedId = this.extension.settings.connect('changed', () => {
             this._fetchSettings();
@@ -43,8 +48,13 @@ class Penguin extends PanelMenu.Button
 
     _fetchSettings () {
         const { settings } = this.extension;
-        ANTHROPIC_API_KEY = settings.get_string("open-router-api-key");
-        ANTHROPIC_MODEL = settings.get_string("llm-model");
+        LLM_PROVIDER = settings.get_string("llm-provider");
+        ANTHROPIC_API_KEY = settings.get_string("anthropic-api-key");
+        OPENAI_API_KEY = settings.get_string("openai-api-key");
+        GEMINI_API_KEY = settings.get_string("gemini-api-key");
+        LLM_MODEL = settings.get_string("llm-model");
+        OPENAI_MODEL = settings.get_string("openai-model");
+        GEMINI_MODEL = settings.get_string("gemini-model");
 
         BACKGROUND_COLOR_HUMAN_MESSAGE = settings.get_string("human-message-color");
         BACKGROUND_COLOR_LLM_MESSAGE = settings.get_string("llm-message-color");
@@ -91,7 +101,7 @@ class Penguin extends PanelMenu.Button
 
             let input = this.chatInput.get_text();
 
-            
+
             this.initializeTextBox('humanMessage', input, BACKGROUND_COLOR_HUMAN_MESSAGE, COLOR_HUMAN_MESSAGE)
 
             // Add input to chat history
@@ -100,18 +110,18 @@ class Penguin extends PanelMenu.Button
                 "content": input
             });
 
-            this.openRouterChat();
+            this.llmChat(); // Changed function name
 
             this.chatInput.set_reactive(false)
             this.chatInput.set_text("I am Thinking...")
         });
 
-        this.newConversation = new St.Button({ 
+        this.newConversation = new St.Button({
             style: "width: 16px; height:16px; margin-right: 15px; margin-left: 10px'",
-        
+
             child: new St.Icon({
                 icon_name: 'tab-new-symbolic',
-                style: 'width: 30px; height:30px'}) 
+                style: 'width: 30px; height:30px'})
         });
 
         this.newConversation.connect('clicked', (actor) => {
@@ -216,34 +226,78 @@ class Penguin extends PanelMenu.Button
         return;
     }
 
-    
-    openRouterChat() {
+
+    llmChat() {
         let message = Soup.Message.new('POST', url);
-        
+
+        let apiKey = "";
+        let requestBody = {};
+
+        if (LLM_PROVIDER === "anthropic") {
+            url = `https://api.anthropic.com/v1/messages`;
+            apiKey = ANTHROPIC_API_KEY;
+            LLM_MODEL = this.extension.settings.get_string("llm-model");
+            message.request_headers.append(
+                'anthropic-version',
+                '2023-06-01'
+            );
+
+            requestBody = {
+                "model": LLM_MODEL,
+                "messages": this.history.map(msg => ({
+                    role: msg.role === "user" ? "user" : "assistant",
+                    content: msg.content
+                })),
+                "max_tokens": 1024
+            };
+
+
+        } else if (LLM_PROVIDER === "openai") {
+            url = `https://api.openai.com/v1/chat/completions`;
+            apiKey = OPENAI_API_KEY;
+            LLM_MODEL = this.extension.settings.get_string("openai-model");
+
+            requestBody = {
+                "model": LLM_MODEL,
+                "messages": this.history.map(msg => ({
+                    role: msg.role === "user" ? "user" : "assistant",
+                    content: msg.content
+                })),
+
+            };
+
+
+        } else if (LLM_PROVIDER === "gemini") {
+            url = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+            apiKey = GEMINI_API_KEY;
+            LLM_MODEL = this.extension.settings.get_string("gemini-model");
+
+            requestBody = {
+                "contents": this.history.map(msg => ({
+                    role: msg.role === "user" ? "user" : "model",
+                    parts: [{ text: msg.content }]
+                })),
+
+            };
+        } else {
+
+            url = `https://api.anthropic.com/v1/messages`;
+            apiKey = ANTHROPIC_API_KEY;
+            LLM_MODEL = this.extension.settings.get_string("llm-model");
+        }
+
+
         message.request_headers.append(
             'x-api-key',
-            ANTHROPIC_API_KEY
-        );
-        message.request_headers.append(
-            'anthropic-version',
-            '2023-06-01'
+            apiKey
         );
         message.request_headers.append(
             'content-type',
             'application/json'
         );
 
-        // Convert history format to Anthropic format
-        let anthropicMessages = this.history.map(msg => ({
-            role: msg.role === "user" ? "user" : "assistant",
-            content: msg.content
-        }));
 
-        let body = JSON.stringify({
-            "model": ANTHROPIC_MODEL,
-            "messages": anthropicMessages,
-            "max_tokens": 1024
-        });
+        let body = JSON.stringify(requestBody);
         let bytes = GLib.Bytes.new(body);
 
         message.set_request_body_from_bytes('application/json', bytes);
@@ -258,20 +312,30 @@ class Penguin extends PanelMenu.Button
                         const bytes = session.send_and_read_finish(result);
                         const decoder = new TextDecoder('utf-8');
                         const response = JSON.parse(decoder.decode(bytes.get_data()));
-                        
-                        const assistantMessage = response.content[0].text;
+
+                        let assistantMessage = "";
+
+                        if (LLM_PROVIDER === "anthropic") {
+                            assistantMessage = response.content[0].text;
+                        } else if (LLM_PROVIDER === "openai") {
+                            assistantMessage = response.choices[0].message.content;
+                        } else if (LLM_PROVIDER === "gemini") {
+                            assistantMessage = response.candidates[0].content.parts[0].text;
+                        }
+
+
                         this.history.push({
                             "role": "assistant",
                             "content": assistantMessage
                         });
 
                         this.initializeTextBox('llmMessage', convertMD(assistantMessage), BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-                        
+
                         // Save updated history
                         const { settings } = this.extension;
                         settings.set_string("history", JSON.stringify(this.history));
                     } else {
-                        let errorMessage = "Sorry, I encountered an error. Please check your API key and try again.";
+                        let errorMessage = `Sorry, I encountered an error (${message.get_status()}). Please check your API key and model settings for ${LLM_PROVIDER} and try again.`;
                         this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
                     }
                 } catch (error) {
@@ -293,7 +357,7 @@ class Penguin extends PanelMenu.Button
             vertical: true,
             style_class: `${type}-box`
         });
-        
+
         // text has to be a string
         let label = new St.Label({
             style_class: type,
@@ -313,14 +377,14 @@ class Penguin extends PanelMenu.Button
             label.connect('button-press-event', (actor) => {
                 this.extension.clipboard.set_text(St.ClipboardType.CLIPBOARD, label.clutter_text.get_text());
             });
-            
-            
+
+
 
             label.connect('enter-event', (actor) => {
 
-                
+
                 if (this.chatInput.get_text() == "") {
-                    this.timeoutCopy = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 0.4, () => { 
+                    this.timeoutCopy = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 0.4, () => {
                         this.chatInput.set_reactive(false);
                         this.chatInput.set_text("Click on text to copy");});
                 }
