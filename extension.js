@@ -186,7 +186,7 @@ class Penguin extends PanelMenu.Button
 
 
         // tab-new-symbolic
-        
+
 
         // --- EXTENSION PARENT BOX LAYOUT
 
@@ -198,14 +198,14 @@ class Penguin extends PanelMenu.Button
         layout.add_child(this.chatView);
         layout.add_child(entryBox);
 
-        
+
         // --- ADDING EVERYTHING TOGETHER TO APPEAR AS A POP UP MENU
         let popUp = new PopupMenu.PopupMenuSection();
         popUp.actor.add_child(layout);
 
         this.menu.addMenuItem(popUp);
 
-        
+
     };
 
     _loadHistory() {
@@ -401,8 +401,8 @@ class Penguin extends PanelMenu.Button
                     this.chatInput.set_text("");
                 }
             });
-            
-        } 
+
+        }
 
         label.clutter_text.set_markup(text);
         this.chatBox.add_child(box);
@@ -423,11 +423,11 @@ class Penguin extends PanelMenu.Button
             this.timeoutResponse = null;
         }
 
-        this._httpSession?.abort(); // <- Don't forget to make the session instance avaialable to the class
+        this._httpSession?.abort(); // <- Don't forget to make the session instance available to the class
         HISTORY = null;
         super.destroy();
     }
-    
+
 });
 
 
@@ -447,5 +447,3 @@ export default class PenguinExtension extends Extension {
         this._penguin = null;
     }
 }
-
-
