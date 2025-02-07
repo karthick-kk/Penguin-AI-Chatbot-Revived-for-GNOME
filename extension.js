@@ -255,15 +255,19 @@ class Penguin extends PanelMenu.Button
 
 
     llmChat() {
-        let message = Soup.Message.new('POST', url);
-
         let apiKey = "";
         let requestBody = {};
+        let message;
 
         if (LLM_PROVIDER === "anthropic") {
-            url = `https://api.anthropic.com/v1/messages`;
-            apiKey = ANTHROPIC_API_KEY;
             LLM_MODEL = this.extension.settings.get_string("llm-model");
+            url = `https://api.anthropic.com/v1/messages`;
+            message = Soup.Message.new('POST', url);
+            apiKey = ANTHROPIC_API_KEY;
+            message.request_headers.append(
+                'x-api-key',
+                apiKey
+            );
             message.request_headers.append(
                 'anthropic-version',
                 '2023-06-01'
@@ -280,9 +284,15 @@ class Penguin extends PanelMenu.Button
 
 
         } else if (LLM_PROVIDER === "openai") {
+            LLM_MODEL = this.extension.settings.get_string("openai-model");
             url = `https://api.openai.com/v1/chat/completions`;
             apiKey = OPENAI_API_KEY;
-            LLM_MODEL = this.extension.settings.get_string("openai-model");
+            message = Soup.Message.new('POST', url);
+
+            message.request_headers.append(
+                'Authorization',
+                `Bearer ${apiKey}`
+            );
 
             requestBody = {
                 "model": LLM_MODEL,
@@ -290,21 +300,34 @@ class Penguin extends PanelMenu.Button
                     role: msg.role === "user" ? "user" : "assistant",
                     content: msg.content
                 })),
-
+                "response_format": {
+                    "type": "text"
+                },
+                "temperature": 1,
+                "max_completion_tokens": 4096,
+                "top_p": 1,
+                "frequency_penalty": 0,
+                "presence_penalty": 0
             };
 
 
         } else if (LLM_PROVIDER === "gemini") {
-            url = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-            apiKey = GEMINI_API_KEY;
             LLM_MODEL = this.extension.settings.get_string("gemini-model");
+            url = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+            message = Soup.Message.new('POST', url);
 
             requestBody = {
                 "contents": this.history.map(msg => ({
                     role: msg.role === "user" ? "user" : "model",
                     parts: [{ text: msg.content }]
                 })),
-
+                "generationConfig": {
+                    "temperature": 1,
+                    "topK": 40,
+                    "topP": 0.95,
+                    "maxOutputTokens": 8192,
+                    "responseMimeType": "text/plain"
+                }
             };
         } else {
 
@@ -314,10 +337,6 @@ class Penguin extends PanelMenu.Button
         }
 
 
-        message.request_headers.append(
-            'x-api-key',
-            apiKey
-        );
         message.request_headers.append(
             'content-type',
             'application/json'
@@ -341,7 +360,6 @@ class Penguin extends PanelMenu.Button
                         const response = JSON.parse(decoder.decode(bytes.get_data()));
 
                         let assistantMessage = "";
-
                         if (LLM_PROVIDER === "anthropic") {
                             assistantMessage = response.content[0].text;
                         } else if (LLM_PROVIDER === "openai") {
@@ -362,11 +380,11 @@ class Penguin extends PanelMenu.Button
                         const { settings } = this.extension;
                         settings.set_string("history", JSON.stringify(this.history));
                     } else {
-                        let errorMessage = `Sorry, I encountered an error (${message.get_status()}). Please check your API key and model settings for ${LLM_PROVIDER} and try again.`;
+                        let errorMessage = `An error ocurred while making the request: ${error}.\nPlease check your API key and model settings for ${LLM_PROVIDER} and try again.`;
                         this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
                     }
                 } catch (error) {
-                    let errorMessage = "An error occurred while processing the response.";
+                    let errorMessage = `An error occurred while processing the response: ${error}`;
                     this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
                     logError(error);
                 }
