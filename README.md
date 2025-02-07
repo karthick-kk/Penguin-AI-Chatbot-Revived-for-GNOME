@@ -1,16 +1,13 @@
-## [Website](https://martijara.gitlab.io/Penguin-AI-Chatbot-for-GNOME/)
-
 # Penguin: AI Chatbot
-
 
 An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI, and Gemini.
 
 > ### **Disclaimer:**
 >
-> This is a fork by @esauvisky of a project originally created by @martijara and further developed by @neonpegasu5.
+> This is a fork by [@esauvisky](https://github.com/esauvisky) of a project originally created by [@martijara](https://gitlab.com/martijara) and further developed by [@neonpegasu5](https://github.com/neonpegasu5).
 > This introduces multi-LLM provider support, keyboard shortcuts, and ongoing enhancements. More features are planned for the future.
 >
-> ### **TODO:**
+> ### **TODO**:
 >
 > *   Automatically focus the input field on window open
 > *   Enable partial message selection (remove left-click copy)
@@ -19,6 +16,33 @@ An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI
 > *   Add a provider selector in the chat window
 > *   Show a chat history selector
 > *   Add quick copy buttons for code blocks
+
+# Download & Installation
+
+You can download the latest version of the extension from the [GitHub Releases](https://github.com/esauvisky/Penguin-AI-Chatbot-for-GNOME/releases) page.  Download the `.zip` file from the latest release, and then install it using the following command:
+
+```bash
+gnome-extensions install penguin-ai-chatbot@coffeecionado.gitlab.io.shell-extension.zip --force
+```
+
+You may need to restart GNOME Shell after installation (log out and log back in, or press Alt+F2, type `r`, and press Enter).
+
+## Manual Installation (from Source)
+
+If you prefer to build the extension from source, follow these steps:
+
+1.  Clone the repository:
+
+    ```bash
+    git clone https://github.com/esauvisky/Penguin-AI-Chatbot-for-GNOME.git
+    cd Penguin-AI-Chatbot-for-GNOME
+    ```
+
+2.  Build, install and enable the extension:
+
+    ```bash
+    make
+    ```
 
 # Getting Started
 
@@ -54,3 +78,7 @@ You can now use the extension! Open the chat window by clicking the Penguin icon
 
 ![Screenshot of Penguin as a GNOME Shell Extension](public/screenshot.png)
 ![Screenshot of Penguin as a GNOME Shell Extension](public/fullscreen.png)
+
+# Original Project
+
+This is a fork of [Penguin-AI-Chatbot-for-GNOME](https://gitlab.com/martijara/Penguin-AI-Chatbot-for-GNOME).
