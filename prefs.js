@@ -36,7 +36,7 @@ class Settings {
         const defaultAnthropicKey = this.schema.get_string("anthropic-api-key");
         const defaultOpenAIKey = this.schema.get_string("openai-api-key");
         const defaultGeminiKey = this.schema.get_string("gemini-api-key");
-        const defaultModel = this.schema.get_string("llm-model");
+        const defaultModel = this.schema.get_string("anthropic-model");
         const defaultOpenAIModel = this.schema.get_string("openai-model");
         const defaultGeminiModel = this.schema.get_string("gemini-model");
         const defaultHumanColor = this.schema.get_string("human-message-color");
@@ -326,7 +326,7 @@ class Settings {
             this.schema.set_string("anthropic-api-key", anthropicApiKey.get_buffer().get_text());
             this.schema.set_string("openai-api-key", openaiApiKey.get_buffer().get_text());
             this.schema.set_string("gemini-api-key", geminiApiKey.get_buffer().get_text());
-            this.schema.set_string("llm-model", model.get_buffer().get_text());
+            this.schema.set_string("anthropic-model", model.get_buffer().get_text());
             this.schema.set_string("openai-model", openaiModel.get_buffer().get_text());
             this.schema.set_string("gemini-model", geminiModel.get_buffer().get_text());
             this.schema.set_string("human-message-color", `${humanColor.get_rgba().to_string()}`);

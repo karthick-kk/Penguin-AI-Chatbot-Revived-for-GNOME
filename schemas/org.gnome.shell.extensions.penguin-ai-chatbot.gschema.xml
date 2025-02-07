@@ -22,7 +22,7 @@
         <summary>Gemini API Key</summary>
         <description>Your Gemini API key. Required to use Gemini models.</description>
     </key>
-    <key name="llm-model" type="s">
+    <key name="anthropic-model" type="s">
         <default>"claude-3-sonnet-20240229"</default>
         <summary>Anthropic Model</summary>
         <description>The Anthropic model to use for chat.</description>

@@ -54,7 +54,7 @@ class Penguin extends PanelMenu.Button
         ANTHROPIC_API_KEY = settings.get_string("anthropic-api-key");
         OPENAI_API_KEY = settings.get_string("openai-api-key");
         GEMINI_API_KEY = settings.get_string("gemini-api-key");
-        LLM_MODEL = settings.get_string("llm-model");
+        LLM_MODEL = settings.get_string("anthropic-model");
         OPENAI_MODEL = settings.get_string("openai-model");
         GEMINI_MODEL = settings.get_string("gemini-model");
 
@@ -260,7 +260,7 @@ class Penguin extends PanelMenu.Button
         let message;
 
         if (LLM_PROVIDER === "anthropic") {
-            LLM_MODEL = this.extension.settings.get_string("llm-model");
+            LLM_MODEL = this.extension.settings.get_string("anthropic-model");
             url = `https://api.anthropic.com/v1/messages`;
             message = Soup.Message.new('POST', url);
             apiKey = ANTHROPIC_API_KEY;
@@ -333,7 +333,7 @@ class Penguin extends PanelMenu.Button
 
             url = `https://api.anthropic.com/v1/messages`;
             apiKey = ANTHROPIC_API_KEY;
-            LLM_MODEL = this.extension.settings.get_string("llm-model");
+            LLM_MODEL = this.extension.settings.get_string("anthropic-model");
         }
 
 
