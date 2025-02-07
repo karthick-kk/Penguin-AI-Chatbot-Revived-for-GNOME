@@ -62,5 +62,12 @@
         <summary>Your Message Text Color</summary>
         <description>The text color for your messages.</description>
     </key>
+    <key name="open-chat-shortcut" type="as">
+      <default><![CDATA[['<Super>l']]]></default>
+      <summary>Shortcut to open the chat window</summary>
+      <description>
+        Keyboard shortcut to open the chat window.
+      </description>
+    </key>
   </schema>
 </schemalist>

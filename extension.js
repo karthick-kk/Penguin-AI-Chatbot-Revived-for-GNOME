@@ -6,6 +6,8 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Soup from 'gi://Soup';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -205,8 +207,33 @@ class Penguin extends PanelMenu.Button
 
         this.menu.addMenuItem(popUp);
 
-
+        this._bindShortcut();
     };
+
+    _bindShortcut() {
+        let shortcut = this.extension.settings.get_strv('open-chat-shortcut')[0];
+        if (shortcut) {
+            Main.wm.addKeybinding(
+                'open-chat-shortcut',
+                this.extension.settings,
+                Meta.KeyBindingFlags.NONE,
+                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
+                this._toggleChatWindow.bind(this)
+            );
+        }
+    }
+
+    _unbindShortcut() {
+        Main.wm.removeKeybinding('open-chat-shortcut');
+    }
+
+    _toggleChatWindow() {
+        if (this.menu.isOpen) {
+            this.menu.close();
+        } else {
+            this.menu.open();
+        }
+    }
 
     _loadHistory() {
         this.history = HISTORY
@@ -423,7 +450,8 @@ class Penguin extends PanelMenu.Button
             this.timeoutResponse = null;
         }
 
-        this._httpSession?.abort(); // <- Don't forget to make the session instance available to the class
+        this._unbindShortcut();
+        this._httpSession?.abort();
         HISTORY = null;
         super.destroy();
     }
@@ -444,6 +472,7 @@ export default class PenguinExtension extends Extension {
     }
     disable() {
         this._penguin.destroy();
+        this._unbindShortcut();
         this._penguin = null;
     }
 }

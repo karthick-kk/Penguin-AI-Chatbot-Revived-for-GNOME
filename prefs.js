@@ -165,6 +165,59 @@ class Settings {
             uri: 'https://ai.google.dev/models/gemini' // TODO: Update this to be more generic or provider-specific
         });
 
+        const defaultShortcut = this.schema.get_strv("open-chat-shortcut")[0];
+
+        // Shortcut
+        const labelShortcut = new Gtk.Label({
+            label: _("Open Chat Shortcut:"),
+            halign: Gtk.Align.START,
+            tooltip_text: _("Set the keyboard shortcut to open the chat window.")
+        });
+
+        const shortcutLabel = new Gtk.ShortcutLabel({
+            accelerator: defaultShortcut,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+        });
+
+        const shortcutButton = new Gtk.Button({
+            label: _("Change"),
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+        });
+
+        const shortcutController = Gtk.EventControllerKey.new();
+        shortcutButton.add_controller(shortcutController);
+        let changingShortcut = false;
+
+        shortcutButton.connect('clicked', () => {
+            changingShortcut = true;
+            shortcutButton.label = _("Press new shortcut...");
+        });
+
+        shortcutController.connect('key-pressed', (controller, keyval, keycode, state) => {
+            if (!changingShortcut) return Gdk.EVENT_PROPAGATE;
+
+            let mask = state & Gtk.accelerator_get_default_mod_mask();
+            let shortcut = Gtk.accelerator_name_with_keycode(null, keyval, keycode, mask);
+            shortcutLabel.accelerator = shortcut;
+
+            return Gdk.EVENT_STOP;
+        });
+
+        shortcutController.connect('key-released', () => {
+            if (!changingShortcut) return;
+
+            changingShortcut = false;
+            shortcutButton.label = _("Change");
+            let newShortcut = shortcutLabel.accelerator;
+            this.schema.set_strv("open-chat-shortcut", [newShortcut]);
+        });
+
+        this.schema.connect('changed::open-chat-shortcut', () => {
+            let newShortcut = this.schema.get_strv("open-chat-shortcut")[0];
+            shortcutLabel.accelerator = newShortcut;
+        });
 
         // Color Dialog
         let colorDialog = new Gtk.ColorDialog({
@@ -324,6 +377,11 @@ class Settings {
 
         this.main.attach(labelLLMTextColor, 0, 10, 1, 1);
         this.main.attach(llmTextColor, 2, 10, 2, 1);
+
+        this.main.attach(labelShortcut, 0, 11, 1, 1);
+        this.main.attach(shortcutLabel, 2, 11, 1, 1);
+        this.main.attach(shortcutButton, 3, 11, 1, 1);
+
 
         this.main.attach(save, 2, 13, 1, 1);
         this.main.attach(statusLabel, 0, 14, 4, 1);
