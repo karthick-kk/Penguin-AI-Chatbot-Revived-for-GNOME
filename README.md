@@ -2,45 +2,55 @@
 
 # Penguin: AI Chatbot
 
-An assistant interface for GNOME that works with Anthropic's Claude AI models. For more information about Anthropic and Claude, visit [Anthropic's website](https://www.anthropic.com/).
 
-[🐧 Linux User? Download this extension for GNOME Shell 👣 ](https://extensions.gnome.org/extension/7338/penguin-ai-chatbot/)
+An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI, and Gemini.
 
-# Getting Started with Anthropic API
+> ### **Disclaimer:**
+>
+> This is a fork by @esauvisky of a project originally created by @martijara and further developed by @neonpegasu5.
+> This introduces multi-LLM provider support, keyboard shortcuts, and ongoing enhancements. More features are planned for the future.
+>
+> ### **TODO:**
+>
+> *   Automatically focus the input field on window open
+> *   Enable partial message selection (remove left-click copy)
+> *   Implement streaming responses
+> *   Allow chat window resizing
+> *   Add a provider selector in the chat window
+> *   Show a chat history selector
+> *   Add quick copy buttons for code blocks
 
-1. Sign up for an [Anthropic account](https://console.anthropic.com/)
+# Getting Started
 
-2. Go to [API Keys](https://console.anthropic.com/account/keys) in your Anthropic Console
+This extension now supports multiple LLM providers.  You will need to obtain an API key from your chosen provider(s):
 
-3. Click on "Create Key" to generate a new API key
+*   **Anthropic:** Sign up and get your API key from [here](https://console.anthropic.com/account/keys).
+*   **OpenAI:** Sign up and get your API key from [here](https://platform.openai.com/api-keys).
+*   **Gemini:** Sign up and get your API key from [here](https://makersuite.google.com/app/apikey).
 
-4. Copy your new API key
+Once you have your API key(s):
 
-5. Open the extension settings window and paste your key (make sure to first delete the default 'Input your key here' text)
+1.  Install the extension.
+2.  Open the extension settings.
+3.  Select your preferred LLM provider.
+4.  Paste your API key into the corresponding field.
+5.  Choose your desired model (refer to the provider's documentation for available models).
+6.  (Optional) Customize the colors for your messages and the chatbot's messages.
+7.  (Optional) Set a keyboard shortcut to quickly open the chat window.
+8. Click Save.
 
-That's it! The extension is now ready to use with Claude. By default, it uses the `claude-3-sonnet-20240229` model, which offers an excellent balance of capabilities and performance. If you want to use a different Claude model, you can find the complete list of available models in the [Anthropic documentation](https://docs.anthropic.com/claude/docs/models-overview).
+You can now use the extension! Open the chat window by clicking the Penguin icon in the top panel or by using the keyboard shortcut (default: Super+L).
 
 # Features
 
-- Chat with Claude AI directly from your GNOME desktop
-- Markdown support for rich text responses
-- Customizable chat colors and appearance
-- Conversation history
-- Easy copy-paste functionality for responses
-- Simple and intuitive interface
+*   **Multiple LLM Providers:** Choose between Anthropic, OpenAI, and Gemini.
+*   **Customizable Models:** Select different models for each provider.
+*   **Chat History:** Remembers your conversation history.
+*   **Customizable Appearance:** Change the background and text colors for messages.
+*   **Keyboard Shortcut:** Quickly open the chat window with a customizable shortcut.
+*   **Copy to Clipboard:** Click on any message to copy it to your clipboard.
 
 # Showcase
 
-![Screenshot from 2024-09-18 12-59-32](https://github.com/user-attachments/assets/26af0878-cc34-4f73-85e1-9a42aa1bde7b)
-
-# Development
-
-To build and install the extension locally:
-
-```bash
-make build     # Build the extension
-make install   # Install the extension
-make enable    # Enable the extension
-make run       # Run a nested GNOME Shell session for testing
-make clean     # Clean up build files
-```
+![Screenshot of Penguin as a GNOME Shell Extension](public/screenshot.png)
+![Screenshot of Penguin as a GNOME Shell Extension](public/fullscreen.png)
