@@ -7,13 +7,14 @@ all: build install
 
 build:
 	rm -f $(BUNDLE_PATH); \
+	glib-compile-schemas schemas/; \
 	gnome-extensions pack --force \
 	                      --extra-source=schemas/ \
 	                      --extra-source=public/ \
 	                      --extra-source=assets/ \
 	                      --extra-source=md2pango.js \
 	                      --extra-source=stylesheet.css \
-	                      --extra-source=prefs.js 
+	                      --extra-source=prefs.js
 
 install:
 	gnome-extensions install $(BUNDLE_PATH) --force
@@ -26,4 +27,4 @@ run:
 
 clean:
 	@rm -fv $(BUNDLE_PATH)
-	@rm -fv schemas/gschemas.compiled 
+	@rm -fv schemas/gschemas.compiled
