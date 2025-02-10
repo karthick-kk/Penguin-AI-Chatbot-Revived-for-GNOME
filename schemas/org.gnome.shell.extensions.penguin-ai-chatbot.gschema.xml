@@ -2,11 +2,16 @@
   <schema id="org.gnome.shell.extensions.penguin-ai-chatbot"
       path="/org/gnome/shell/extensions/penguin-ai-chatbot/">
 
+
+
     <key name="llm-provider" type="s">
-        <default>"anthropic"</default>
+        <default>"openrouter"</default>
         <summary>LLM Provider</summary>
         <description>Choose the Large Language Model (LLM) provider for the chatbot.</description>
     </key>
+
+
+
     <key name="anthropic-api-key" type="s">
         <default>""</default>
         <summary>Anthropic API Key</summary>
@@ -22,6 +27,14 @@
         <summary>Gemini API Key</summary>
         <description>Your Gemini API key. Required to use Gemini models.</description>
     </key>
+    <key name="openrouter-api-key" type="s">
+        <default>""</default>
+        <summary>Open Router API Key</summary>
+        <description>Your Open Router API key. Required to use Open Router models.</description>
+    </key>
+
+
+
     <key name="anthropic-model" type="s">
         <default>"claude-3-sonnet-20240229"</default>
         <summary>Anthropic Model</summary>
@@ -32,16 +45,27 @@
         <summary>OpenAI Model</summary>
         <description>The OpenAI model to use for chat.</description>
     </key>
+    <key name="openrouter-model" type="s">
+        <default>"meta-llama/llama-3.3-70b-instruct:free"</default>
+        <summary>OpenRouter model</summary>
+        <description>The OpenRouter model to use for chat.</description>
+    </key>
     <key name="gemini-model" type="s">
         <default>"gemini-2.0-flash"</default>
         <summary>Gemini Model</summary>
         <description>The Gemini model to use for chat.</description>
     </key>
+
+
+
     <key name="history" type="s">
         <default>"[]"</default>
         <summary>Chat History</summary>
         <description>Stores the chat history as a JSON string.</description>
     </key>
+
+
+
     <key name="human-message-color" type="s">
         <default>"rgb(0, 106, 255)"</default>
         <summary>Your Message Background Color</summary>

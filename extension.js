@@ -1,5 +1,4 @@
-// Made by @martijara
-// Edited by @neonpegasu5
+// Made by contributors to https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME
 
 // Importing necessary libraries
 import GObject from 'gi://GObject';
@@ -26,6 +25,9 @@ let GEMINI_API_KEY = "";
 let LLM_MODEL = "";
 let OPENAI_MODEL = "";
 let GEMINI_MODEL = "";
+let OPENROUTER_MODEL = ""
+let OPENROUTER_API_KEY = ""
+
 let HISTORY = [];
 let BACKGROUND_COLOR_HUMAN_MESSAGE = "";
 let BACKGROUND_COLOR_LLM_MESSAGE = "";
@@ -51,12 +53,17 @@ class Penguin extends PanelMenu.Button
     _fetchSettings () {
         const { settings } = this.extension;
         LLM_PROVIDER = settings.get_string("llm-provider");
+
         ANTHROPIC_API_KEY = settings.get_string("anthropic-api-key");
         OPENAI_API_KEY = settings.get_string("openai-api-key");
         GEMINI_API_KEY = settings.get_string("gemini-api-key");
+        OPENROUTER_API_KEY = settings.get_string("openrouter-api-key");
+
         LLM_MODEL = settings.get_string("anthropic-model");
         OPENAI_MODEL = settings.get_string("openai-model");
         GEMINI_MODEL = settings.get_string("gemini-model");
+        OPENROUTER_MODEL = settings.get_string("openrouter-model");
+        
 
         BACKGROUND_COLOR_HUMAN_MESSAGE = settings.get_string("human-message-color");
         BACKGROUND_COLOR_LLM_MESSAGE = settings.get_string("llm-message-color");
@@ -329,7 +336,24 @@ class Penguin extends PanelMenu.Button
                     "responseMimeType": "text/plain"
                 }
             };
-        } else {
+        } else if (LLM_PROVIDER === "openrouter") {
+            LLM_MODEL = this.extension.settings.get_string("openrouter-model");
+            url = `https://openrouter.ai/api/v1/chat/completions`;
+            message = Soup.Message.new('POST', url);
+
+            message.request_headers.append(
+                'Authorization',
+                `Bearer ${OPENROUTER_API_KEY}`);
+
+
+            requestBody = {
+                "messages": this.history,
+                "model": OPENROUTER_MODEL
+                
+                }
+            }
+        
+        else {
 
             url = `https://api.anthropic.com/v1/messages`;
             apiKey = ANTHROPIC_API_KEY;
@@ -366,6 +390,8 @@ class Penguin extends PanelMenu.Button
                             assistantMessage = response.choices[0].message.content;
                         } else if (LLM_PROVIDER === "gemini") {
                             assistantMessage = response.candidates[0].content.parts[0].text;
+                        } else if (LLM_PROVIDER === "openrouter") {
+                            assistantMessage = response.choices[0].message.content;
                         }
 
 
@@ -380,12 +406,33 @@ class Penguin extends PanelMenu.Button
                         const { settings } = this.extension;
                         settings.set_string("history", JSON.stringify(this.history));
                     } else {
-                        let errorMessage = `An error ocurred while making the request: ${error}.\nPlease check your API key and model settings for ${LLM_PROVIDER} and try again.`;
+                        let errorMessage = `Hmm, an error occured when trying to reach out to the assistant.\nCheck your API key and model settings for ${LLM_PROVIDER} and try again. It could also be your internet connection!`;
                         this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
+
+                        let settingsButton = new St.Button({
+                            label: "Click here to go to settings", can_focus: true,  toggle_mode: true
+                        });
+                    
+                        settingsButton.connect('clicked', (self) => {
+                            this.openSettings();
+                        });
+            
+                        this.chatBox.add_child(settingsButton)
                     }
                 } catch (error) {
-                    let errorMessage = `An error occurred while processing the response: ${error}`;
+                    let errorMessage = `We are having trouble getting a response from the assistant. \nHere is the error - if it helps at all: \n\n${error} \n\nSome tips:\n\n- Check your internet connection\n- If you recently changed your provider, try deleting your history.`;
                     this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
+
+                    let settingsButton = new St.Button({
+                        label: "Click here to go to settings", can_focus: true,  toggle_mode: true
+                    });
+                
+                    settingsButton.connect('clicked', (self) => {
+                        this.openSettings();
+                    });
+        
+                    this.chatBox.add_child(settingsButton)
+
                     logError(error);
                 }
 

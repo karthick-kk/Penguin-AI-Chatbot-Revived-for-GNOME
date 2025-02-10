@@ -1,5 +1,4 @@
-// Made by @martijara
-// Edited by @neonpegasu5
+// Made by contributors to https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME
 
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
@@ -33,12 +32,17 @@ class Settings {
 
         // Getting necessary schema values
         const defaultProvider = this.schema.get_string("llm-provider");
+
         const defaultAnthropicKey = this.schema.get_string("anthropic-api-key");
         const defaultOpenAIKey = this.schema.get_string("openai-api-key");
         const defaultGeminiKey = this.schema.get_string("gemini-api-key");
+        const defaultOpenRouterKey = this.schema.get_string("openrouter-api-key");
+
         const defaultModel = this.schema.get_string("anthropic-model");
         const defaultOpenAIModel = this.schema.get_string("openai-model");
         const defaultGeminiModel = this.schema.get_string("gemini-model");
+        const defaultOpenRouterModel = this.schema.get_string("openrouter-model");
+
         const defaultHumanColor = this.schema.get_string("human-message-color");
         const defaultLLMColor = this.schema.get_string("llm-message-color");
         const defaultHumanTextColor = this.schema.get_string("human-message-text-color");
@@ -55,6 +59,7 @@ class Settings {
         providerList.append(_("Anthropic"));
         providerList.append(_("OpenAI"));
         providerList.append(_("Gemini"));
+        providerList.append(_("OpenRouter"));
         const provider = new Gtk.DropDown({
             model: providerList,
             expression: new Gtk.ConstantExpression(0)
@@ -119,6 +124,22 @@ class Settings {
             uri: 'https://makersuite.google.com/app/apikey'
         });
 
+        // API Key Section - OpenRouter.ai
+        const labelOpenRouterAPI = new Gtk.Label({
+            label: _("OpenRouter API Key:"),
+            halign: Gtk.Align.START,
+            tooltip_text: _("Enter your OpenRouter API key here.") // Added tooltip
+        });
+        const openRouterApiKey = new Gtk.Entry({
+            buffer: new Gtk.EntryBuffer(),
+            visibility: false // hide the key
+        });
+        openRouterApiKey.set_placeholder_text(_("Paste your OpenRouter API key"));
+        const howToOpenRouterAPI = new Gtk.LinkButton({
+            label: _("Get OpenRouter API Key"),
+            uri: 'https://openrouter.ai/settings/keys'
+        });
+
 
         // LLM Model Section - Anthropic
         const labelModel = new Gtk.Label({
@@ -163,6 +184,21 @@ class Settings {
         const howToGeminiModel = new Gtk.LinkButton({
             label: _("Available Gemini Models"),
             uri: 'https://ai.google.dev/models/gemini' // TODO: Update this to be more generic or provider-specific
+        });
+
+        // LLM Model Section - OpenRouter
+        const labelOpenRouterModel = new Gtk.Label({
+            label: _("OpenRouter Model:"),
+            halign: Gtk.Align.START,
+            tooltip_text: _("Specify the OpenRouter model you want to use.  Example: meta-llama/llama-3.3-70b-instruct:free") // Added tooltip
+        });
+        const openRouterModel = new Gtk.Entry({
+            buffer: new Gtk.EntryBuffer()
+        });
+        geminiModel.set_placeholder_text(_("e.g., gemini-1.0-pro"));
+        const howToOpenRouterModel = new Gtk.LinkButton({
+            label: _("Available OpenRouter Models"),
+            uri: 'https://openrouter.ai/models' // TODO: Update this to be more generic or provider-specific
         });
 
         const defaultShortcut = this.schema.get_strv("open-chat-shortcut")[0];
@@ -315,24 +351,34 @@ class Settings {
         anthropicApiKey.set_text(defaultAnthropicKey);
         openaiApiKey.set_text(defaultOpenAIKey);
         geminiApiKey.set_text(defaultGeminiKey);
+        openRouterApiKey.set_text(defaultOpenRouterKey);
+
         model.set_text(defaultModel);
         openaiModel.set_text(defaultOpenAIModel);
         geminiModel.set_text(defaultGeminiModel);
+        openRouterModel.set_text(defaultOpenRouterModel);
 
 
         save.connect('clicked', () => {
             let selectedProvider = providerList.get_string(provider.get_selected()).toLowerCase();
             this.schema.set_string("llm-provider", selectedProvider);
+
             this.schema.set_string("anthropic-api-key", anthropicApiKey.get_buffer().get_text());
             this.schema.set_string("openai-api-key", openaiApiKey.get_buffer().get_text());
             this.schema.set_string("gemini-api-key", geminiApiKey.get_buffer().get_text());
+            this.schema.set_string("openrouter-api-key", openRouterApiKey.get_buffer().get_text());
+
             this.schema.set_string("anthropic-model", model.get_buffer().get_text());
             this.schema.set_string("openai-model", openaiModel.get_buffer().get_text());
             this.schema.set_string("gemini-model", geminiModel.get_buffer().get_text());
+            this.schema.set_string("openrouter-model", openRouterModel.get_buffer().get_text());
+
             this.schema.set_string("human-message-color", `${humanColor.get_rgba().to_string()}`);
             this.schema.set_string("llm-message-color", `${llmColor.get_rgba().to_string()}`);
             this.schema.set_string("human-message-text-color", `${humanTextColor.get_rgba().to_string()}`);
             this.schema.set_string("llm-message-text-color", `${llmTextColor.get_rgba().to_string()}`);
+
+
             statusLabel.set_markup(_("Preferences Saved")); // Updated
         });
 
@@ -353,38 +399,46 @@ class Settings {
         this.main.attach(geminiApiKey, 2, 3, 2, 1);
         this.main.attach(howToGeminiAPI, 4, 3, 1, 1);
 
-        this.main.attach(labelModel, 0, 4, 1, 1);
-        this.main.attach(model, 2, 4, 2, 1);
-        this.main.attach(howToModel, 4, 4, 1, 1);
+        this.main.attach(labelOpenRouterAPI, 0, 4, 1, 1);
+        this.main.attach(openRouterApiKey, 2, 4, 2, 1);
+        this.main.attach(howToOpenRouterAPI, 4, 4, 1, 1);
 
-        this.main.attach(labelOpenAIModel, 0, 5, 1, 1);
-        this.main.attach(openaiModel, 2, 5, 2, 1);
-        this.main.attach(howToOpenAIModel, 4, 5, 1, 1);
+        this.main.attach(labelModel, 0, 5, 1, 1);
+        this.main.attach(model, 2, 5, 2, 1);
+        this.main.attach(howToModel, 4, 5, 1, 1);
 
-        this.main.attach(labelGeminiModel, 0, 6, 1, 1);
-        this.main.attach(geminiModel, 2, 6, 2, 1);
-        this.main.attach(howToGeminiModel, 4, 6, 1, 1);
+        this.main.attach(labelOpenAIModel, 0, 6, 1, 1);
+        this.main.attach(openaiModel, 2, 6, 2, 1);
+        this.main.attach(howToOpenAIModel, 4, 6, 1, 1);
 
+        this.main.attach(labelGeminiModel, 0, 7, 1, 1);
+        this.main.attach(geminiModel, 2, 7, 2, 1);
+        this.main.attach(howToGeminiModel, 4, 7, 1, 1);
 
-        this.main.attach(labelHumanColor, 0, 7, 1, 1);
-        this.main.attach(humanColor, 2, 7, 2, 1);
-
-        this.main.attach(labelHumanTextColor, 0, 8, 1, 1);
-        this.main.attach(humanTextColor, 2, 8, 2, 1);
-
-        this.main.attach(labelLLMColor, 0, 9, 1, 1);
-        this.main.attach(llmColor, 2, 9, 2, 1);
-
-        this.main.attach(labelLLMTextColor, 0, 10, 1, 1);
-        this.main.attach(llmTextColor, 2, 10, 2, 1);
-
-        this.main.attach(labelShortcut, 0, 11, 1, 1);
-        this.main.attach(shortcutLabel, 2, 11, 1, 1);
-        this.main.attach(shortcutButton, 3, 11, 1, 1);
+        this.main.attach(labelOpenRouterModel, 0, 8, 1, 1);
+        this.main.attach(openRouterModel, 2, 8, 2, 1);
+        this.main.attach(howToOpenRouterModel, 4, 8, 1, 1);
 
 
-        this.main.attach(save, 2, 13, 1, 1);
-        this.main.attach(statusLabel, 0, 14, 4, 1);
+        this.main.attach(labelHumanColor, 0, 9, 1, 1);
+        this.main.attach(humanColor, 2, 9, 2, 1);
+
+        this.main.attach(labelHumanTextColor, 0, 10, 1, 1);
+        this.main.attach(humanTextColor, 2, 10, 2, 1);
+
+        this.main.attach(labelLLMColor, 0, 11, 1, 1);
+        this.main.attach(llmColor, 2, 11, 2, 1);
+
+        this.main.attach(labelLLMTextColor, 0, 12, 1, 1);
+        this.main.attach(llmTextColor, 2, 12, 2, 1);
+
+        this.main.attach(labelShortcut, 0, 13, 1, 1);
+        this.main.attach(shortcutLabel, 2, 13, 1, 1);
+        this.main.attach(shortcutButton, 3, 13, 1, 1);
+
+
+        this.main.attach(save, 2, 14, 1, 1);
+        this.main.attach(statusLabel, 0, 15, 4, 1);
 
         this.ui.add(this.main);
     }

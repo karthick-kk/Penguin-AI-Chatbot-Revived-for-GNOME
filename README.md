@@ -34,7 +34,7 @@ If you prefer to build the extension from source, follow these steps:
 1.  Clone the repository:
 
     ```bash
-    git clone https://github.com/esauvisky/Penguin-AI-Chatbot-for-GNOME.git
+    git clone https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME.git
     cd Penguin-AI-Chatbot-for-GNOME
     ```
 
@@ -51,6 +51,7 @@ This extension now supports multiple LLM providers.  You will need to obtain an 
 *   **Anthropic:** Sign up and get your API key from [here](https://console.anthropic.com/account/keys).
 *   **OpenAI:** Sign up and get your API key from [here](https://platform.openai.com/api-keys).
 *   **Gemini:** Sign up and get your API key from [here](https://makersuite.google.com/app/apikey).
+*   **OpenRouter** Sign up and get your API key from [here](https://openrouter.ai/settings/keys)
 
 Once you have your API key(s):
 
@@ -67,7 +68,7 @@ You can now use the extension! Open the chat window by clicking the Penguin icon
 
 # Features
 
-*   **Multiple LLM Providers:** Choose between Anthropic, OpenAI, and Gemini.
+*   **Multiple LLM Providers:** Choose between Anthropic, OpenAI, Gemini, and OpenRouter.
 *   **Customizable Models:** Select different models for each provider.
 *   **Chat History:** Remembers your conversation history.
 *   **Customizable Appearance:** Change the background and text colors for messages.
