@@ -1,3 +1,5 @@
+GNOME Linux user? Download the extension [here](https://extensions.gnome.org/extension/7338/penguin-ai-chatbot/)
+
 # Penguin: AI Chatbot
 
 An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI, and Gemini.
@@ -15,7 +17,9 @@ An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI
 
 # Download & Installation
 
-You can download the latest version of the extension from the [GitHub Releases](https://github.com/esauvisky/Penguin-AI-Chatbot-for-GNOME/releases) page.  Download the `.zip` file from the latest release, and then install it using the following command:
+**The easiest way to install would be directly from GNOME's extensions website** -> [just click here](https://extensions.gnome.org/extension/7338/penguin-ai-chatbot/)
+
+Alternatively, You can download the latest version of the extension from the [GitHub Releases](https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME/releases/tag/v14) page.  Download the `.zip` file from the latest release, and then install it using the following command:
 
 ```bash
 gnome-extensions install penguin-ai-chatbot@coffeecionado.gitlab.io.shell-extension.zip --force
