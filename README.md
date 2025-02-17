@@ -1,11 +1,12 @@
-GNOME Linux user? Download the extension [here](https://extensions.gnome.org/extension/7338/penguin-ai-chatbot/)
+GNOME Linux user 👣? Download the extension [here](https://extensions.gnome.org/extension/7338/penguin-ai-chatbot/)
 
-# Penguin: AI Chatbot
+---
+# Penguin: AI Chatbot 🐧
 
 An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI, and Gemini.
 
 >
-> ### **TODO**:
+> ### **TODO** ✅:
 >
 > *   Automatically focus the input field on window open
 > *   Enable partial message selection (remove left-click copy)
@@ -75,7 +76,11 @@ You can now use the extension! Open the chat window by clicking the Penguin icon
 *   **Keyboard Shortcut:** Quickly open the chat window with a customizable shortcut.
 *   **Copy to Clipboard:** Click on any message to copy it to your clipboard.
 
-# Showcase
+# Showcase 📺
 
-![Screenshot of Penguin as a GNOME Shell Extension](public/screenshot.png)
-![Screenshot of Penguin as a GNOME Shell Extension](public/fullscreen.png)
+![image](https://github.com/user-attachments/assets/a062ef18-c8ae-4188-908f-24bf8b12315e)
+
+---
+
+[See 👀, Star ✨, or Fork 🍴, on Github](https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME) 🐙
+
