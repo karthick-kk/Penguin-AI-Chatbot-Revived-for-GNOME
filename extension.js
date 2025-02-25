@@ -384,6 +384,7 @@ class Penguin extends PanelMenu.Button
                         const response = JSON.parse(decoder.decode(bytes.get_data()));
 
                         let assistantMessage = "";
+
                         if (LLM_PROVIDER === "anthropic") {
                             assistantMessage = response.content[0].text;
                         } else if (LLM_PROVIDER === "openai") {
@@ -537,7 +538,6 @@ export default class PenguinExtension extends Extension {
     }
     disable() {
         this._penguin.destroy();
-        this._unbindShortcut();
         this._penguin = null;
     }
 }
