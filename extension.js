@@ -510,7 +510,10 @@ class Penguin extends PanelMenu.Button
                 if (this.chatInput.get_text() == "Click on text to copy") {
                     this.chatInput.set_reactive(true);
                     this.chatInput.set_text("");
+                
                 }
+
+                this._focusInputBox();
             });
 
         }
@@ -541,7 +544,6 @@ class Penguin extends PanelMenu.Button
     }
 
 });
-
 
 export default class PenguinExtension extends Extension {
     enable() {
