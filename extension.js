@@ -539,6 +539,7 @@ class Penguin extends PanelMenu.Button
 
         this._unbindShortcut();
         this._httpSession?.abort();
+        this.timeoutFocusInputBox = null;
         HISTORY = null;
         super.destroy();
     }
