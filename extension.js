@@ -539,7 +539,10 @@ class Penguin extends PanelMenu.Button
 
         this._unbindShortcut();
         this._httpSession?.abort();
-        this.timeoutFocusInputBox = null;
+        if (this.timeoutFocusInputBox) {
+            GLib.Source.remove(this.timeoutFocusInputBox);
+            this.timeoutFocusInputBox = null;
+        }
         HISTORY = null;
         super.destroy();
     }
