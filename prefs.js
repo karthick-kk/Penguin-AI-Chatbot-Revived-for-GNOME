@@ -5,6 +5,7 @@
  * Provides the UI for configuring the extension.
  */
 
+/// <reference path="./global.d.ts" />
 import Gtk from "gi://Gtk";
 import Adw from "gi://Adw";
 import GLib from "gi://GLib";

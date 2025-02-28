@@ -8,6 +8,7 @@
  * https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME
  */
 
+/// <reference path="./global.d.ts" />
 import GObject from "gi://GObject";
 import St from "gi://St";
 import GLib from "gi://GLib";

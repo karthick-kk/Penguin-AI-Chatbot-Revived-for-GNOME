@@ -21,6 +21,9 @@ declare module 'gi://Shell' {
 declare module 'gi://Pango' {
   export * from '@girs/st-15';
 }
+declare module 'gi://St' {
+  export * from '@girs/st-15';
+}
 
 // GTK and LibAdwaita typings
 declare module 'gi://Gtk' {
