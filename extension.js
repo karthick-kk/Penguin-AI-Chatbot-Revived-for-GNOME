@@ -1,565 +1,382 @@
-// Made by contributors to https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME
+/**
+ * Penguin AI Chatbot for GNOME
+ *
+ * A GNOME Shell extension that integrates AI chatbot capabilities
+ * with support for multiple LLM providers.
+ *
+ * Based on work by contributors to:
+ * https://github.com/martijara/Penguin-AI-Chatbot-for-GNOME
+ */
 
-// Importing necessary libraries
-import GObject from 'gi://GObject';
-import St from 'gi://St';
-import Soup from 'gi://Soup';
-import GLib from 'gi://GLib';
-import Meta from 'gi://Meta';
-import Shell from 'gi://Shell';
+import GObject from "gi://GObject";
+import St from "gi://St";
+import GLib from "gi://GLib";
 
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
-import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import Pango from 'gi://Pango';
-import {convertMD} from "./md2pango.js";
+import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
+import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
+import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { SettingsManager } from "./lib/settings.js";
+import { LLMProviderFactory } from "./lib/llmProviders.js";
+import { ChatMessageDisplay } from "./lib/chatUI.js";
+import { setupShortcut, removeShortcut, formatString, focusInput } from "./lib/utils.js";
+import { MessageRoles, CSS, UI } from "./lib/constants.js";
 
-
-// Defining necessary variables (LLM API)
-let LLM_PROVIDER = "";
-let ANTHROPIC_API_KEY = "";
-let OPENAI_API_KEY = "";
-let GEMINI_API_KEY = "";
-let LLM_MODEL = "";
-let OPENAI_MODEL = "";
-let GEMINI_MODEL = "";
-let OPENROUTER_MODEL = ""
-let OPENROUTER_API_KEY = ""
-
-let HISTORY = [];
-let BACKGROUND_COLOR_HUMAN_MESSAGE = "";
-let BACKGROUND_COLOR_LLM_MESSAGE = "";
-let COLOR_HUMAN_MESSAGE = "";
-let COLOR_LLM_MESSAGE = ""
-let url = ""; // Placeholder, will be set dynamically
-
-
-
-// Class that activates the extension
+/**
+ * Main extension class that handles the chat interface
+ */
 const Penguin = GObject.registerClass(
-class Penguin extends PanelMenu.Button
-{
+    class Penguin extends PanelMenu.Button {
+        /**
+        * Initialize the Penguin chat interface
+        * @param {object} params - Initialization parameters
+        */
+        _init(extension) {
+            super._init(0.0, _("Penguin: AI Chatbot"));
 
+            this._extension = extension;
+            this._settingsManager = new SettingsManager(this._extension.settings);
+            this._clipboard = this._extension.clipboard;
 
-    _loadSettings () {
-        this._settingsChangedId = this.extension.settings.connect('changed', () => {
-            this._fetchSettings();
-        });
-        this._fetchSettings();
-    }
+            // Load settings
+            this._loadSettings();
 
-    _fetchSettings () {
-        const { settings } = this.extension;
-        LLM_PROVIDER = settings.get_string("llm-provider");
+            // Initialize UI elements
+            this._initializeUI();
 
-        ANTHROPIC_API_KEY = settings.get_string("anthropic-api-key");
-        OPENAI_API_KEY = settings.get_string("openai-api-key");
-        GEMINI_API_KEY = settings.get_string("gemini-api-key");
-        OPENROUTER_API_KEY = settings.get_string("openrouter-api-key");
+            // Set up keyboard shortcut
+            this._bindShortcut();
 
-        LLM_MODEL = settings.get_string("anthropic-model");
-        OPENAI_MODEL = settings.get_string("openai-model");
-        GEMINI_MODEL = settings.get_string("gemini-model");
-        OPENROUTER_MODEL = settings.get_string("openrouter-model");
-        
+            // Set up timeout handles
+            this._timeoutResponse = null;
+            this._timeoutFocusInputBox = null;
 
-        BACKGROUND_COLOR_HUMAN_MESSAGE = settings.get_string("human-message-color");
-        BACKGROUND_COLOR_LLM_MESSAGE = settings.get_string("llm-message-color");
+            // Initialize history
+            this._history = [];
+            this._loadHistory();
+        }
 
-        COLOR_HUMAN_MESSAGE = settings.get_string("human-message-text-color");
-        COLOR_LLM_MESSAGE = settings.get_string("llm-message-text-color");
+        /**
+        * Initialize the UI elements
+        * @private
+        */
+        _initializeUI() {
+        // Add icon to the top bar
+            this.add_child(new St.Icon({
+                icon_name:   "Penguin: AI Chatbot",
+                style_class: "icon",
+            }));
 
-        HISTORY = JSON.parse(settings.get_string("history"));
-    }
-
-    _init(extension) {
-        // --- INITIALIZATION AND ICON IN TOPBAR
-        super._init(0.0, _('Penguin: AI Chatbot'));
-        this.extension = extension
-        this._loadSettings();
-
-        this.add_child(new St.Icon({
-            icon_name: 'Penguin: AI Chatbot',
-            style_class: 'icon',
-        }));
-
-
-        // ... INITIALIZATION OF SESSION VARIABLES
-        this.history = []
-        this._httpSession = new Soup.Session();
-        this.timeoutCopy = null
-        this.timeoutResponse = null
-        this.timeoutFocusInputBox = null;
-
-
-        // --- EXTENSION FOOTER
-        this.chatInput = new St.Entry({
-            hint_text: "Chat with me",
-            can_focus: true,
-            track_hover: true,
-            style_class: 'messageInput'
-        });
-
-        // Enter clicked
-        this.chatInput.clutter_text.connect('activate', (actor) => {
-            if (this.timeoutResponse) {
-                GLib.Source.remove(this.timeoutResponse);
-                this.timeoutResponse = null;
-            }
-
-            let input = this.chatInput.get_text();
-
-
-            this.initializeTextBox('humanMessage', input, BACKGROUND_COLOR_HUMAN_MESSAGE, COLOR_HUMAN_MESSAGE)
-
-            // Add input to chat history
-            this.history.push({
-                "role": "user",
-                "content": input
+            // Create chat container
+            this._chatBox = new St.BoxLayout({
+                vertical:    true,
+                style_class: CSS.POPUP_MENU_BOX,
+                style:       "text-wrap: wrap",
             });
 
-            this.llmChat(); // Changed function name
-
-            this.chatInput.set_reactive(false)
-            this.chatInput.set_text("I am Thinking...")
-        });
-
-        this.newConversation = new St.Button({
-            style: "width: 16px; height:16px; margin-right: 15px; margin-left: 10px'",
-
-            child: new St.Icon({
-                icon_name: 'tab-new-symbolic',
-                style: 'width: 30px; height:30px'})
-        });
-        this.menu.connect('open-state-changed', (self, open) => {
-            if (open) {
-                this._focusInputBox();
-            }
-        });
-        this.newConversation.connect('clicked', (actor) => {
-            if (this.chatInput.get_text() == "Create a new conversation (Deletes current)" ||  this.chatInput.get_text() != "I am Thinking...") {
-                this.history = []
-
-                const { settings } = this.extension;
-                settings.set_string("history", "[]");
-
-                this.chatBox.destroy_all_children()
-            }
-            else {
-
-                this.initializeTextBox('llmMessage', "You can't create a new conversation while I am thinking", BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-            }
-        });
-
-        this.newConversation.connect('enter-event', (actor) => {
-            if (this.chatInput.get_text() == "") {
-                this.chatInput.set_reactive(false)
-                this.chatInput.set_text("Create a new conversation (Deletes current)")
-            }
-        });
-
-        this.newConversation.connect('leave-event', (actor) => {
-            if (this.chatInput.get_text() == "Create a new conversation (Deletes current)") {
-                this.chatInput.set_reactive(true)
-                this.chatInput.set_text("")
-            }
-        });
-
-
-        let entryBox = new St.BoxLayout({
-            vertical: false,
-            style_class: 'popup-menu-box'
-        });
-
-        entryBox.add_child(this.chatInput);
-        entryBox.add_child(this.newConversation);
-
-
-
-
-        // --- EXTENSION BODY
-        this.chatBox = new St.BoxLayout({
-            vertical: true,
-            style_class: 'popup-menu-box',
-            style: 'text-wrap: wrap'
-        });
-
-        this.chatInput.set_reactive(false)
-        this.chatInput.set_text("Loading history...")
-        this._loadHistory();
-
-        this.chatView = new St.ScrollView({
-            enable_mouse_scrolling: true,
-            style_class: 'chat-scrolling',
-            reactive: true
-        });
-
-        this.chatView.set_child(this.chatBox);
-
-
-        // tab-new-symbolic
-
-
-        // --- EXTENSION PARENT BOX LAYOUT
-
-        let layout = new St.BoxLayout({
-            vertical: true,
-            style_class: 'popup-menu-box'
-        });
-
-        layout.add_child(this.chatView);
-        layout.add_child(entryBox);
-
-
-        // --- ADDING EVERYTHING TOGETHER TO APPEAR AS A POP UP MENU
-        let popUp = new PopupMenu.PopupMenuSection();
-        popUp.actor.add_child(layout);
-
-        this.menu.addMenuItem(popUp);
-
-        this._bindShortcut();
-    };
-
-    _bindShortcut() {
-        let shortcut = this.extension.settings.get_strv('open-chat-shortcut')[0];
-        if (shortcut) {
-            Main.wm.addKeybinding(
-                'open-chat-shortcut',
-                this.extension.settings,
-                Meta.KeyBindingFlags.NONE,
-                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
-                this._toggleChatWindow.bind(this)
+            // Create chat message display
+            const styleSettings = this._settingsManager.getStyleSettings();
+            this._chatDisplay = new ChatMessageDisplay(
+                this._chatBox,
+                styleSettings,
+                () => this._openSettings()
             );
-        }
-    }
+            this._chatDisplay.setClipboard(this._clipboard);
 
-    _unbindShortcut() {
-        Main.wm.removeKeybinding('open-chat-shortcut');
-    }
+            // Create chat input
+            this._chatInput = new St.Entry({
+                hint_text:   UI.CHAT_INPUT_PLACEHOLDER,
+                can_focus:   true,
+                track_hover: true,
+                style_class: CSS.MESSAGE_INPUT,
+            });
+            this._chatDisplay.setChatInput(this._chatInput);
 
-    _focusInputBox() {
-        if (!this.timeoutFocusInputBox) {
-            this.timeoutFocusInputBox = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
-                this.chatInput.grab_key_focus();
-                this.timeoutFocusInputBox = null;
-                return GLib.SOURCE_REMOVE;
+            // Set up input event handler
+            this._chatInput.clutter_text.connect("activate", () => this._handleUserInput());
+
+            // Create new conversation button
+            this._newConversationButton = new St.Button({
+                style: "width: 16px; height:16px; margin-right: 15px; margin-left: 10px'",
+                child: new St.Icon({
+                    icon_name: "tab-new-symbolic",
+                    style:     "width: 30px; height:30px",
+                }),
+            });
+
+            // Set up new conversation button event handlers
+            this._newConversationButton.connect("clicked", () => this._handleNewConversation());
+            this._newConversationButton.connect("enter-event", () => this._handleNewConversationEnter());
+            this._newConversationButton.connect("leave-event", () => this._handleNewConversationLeave());
+
+            // Create bottom input area
+            const entryBox = new St.BoxLayout({
+                vertical:    false,
+                style_class: CSS.POPUP_MENU_BOX,
+            });
+            entryBox.add_child(this._chatInput);
+            entryBox.add_child(this._newConversationButton);
+
+            // Create scrollable chat view
+            this._chatView = new St.ScrollView({
+                enable_mouse_scrolling: true,
+                style_class:            CSS.CHAT_SCROLLING,
+                reactive:               true,
+            });
+            this._chatView.set_child(this._chatBox);
+
+            // Create main layout
+            const layout = new St.BoxLayout({
+                vertical:    true,
+                style_class: CSS.POPUP_MENU_BOX,
+            });
+            layout.add_child(this._chatView);
+            layout.add_child(entryBox);
+
+            // Add to popup menu
+            const popUp = new PopupMenu.PopupMenuSection();
+            popUp.actor.add_child(layout);
+            this.menu.addMenuItem(popUp);
+
+            // Setup menu open/close handler
+            this.menu.connect("open-state-changed", (self, open) => {
+                if (open) {
+                    this._focusInputBox();
+                }
             });
         }
-    }
 
-    _toggleChatWindow() {
-        if (this.menu.isOpen) {
-            this.menu.close();
-        } else {
-            this.menu.open();
+        /**
+        * Load settings and connect to changes
+        * @private
+        */
+        _loadSettings() {
+            this._settingsManager.connectToChanges(() => {
+                this._chatDisplay.updateStyleSettings(this._settingsManager.getStyleSettings());
+            });
+        }
+
+        /**
+        * Handle user message input
+        * @private
+        */
+        _handleUserInput() {
+            if (this._timeoutResponse) {
+                GLib.Source.remove(this._timeoutResponse);
+                this._timeoutResponse = null;
+            }
+
+            const input = this._chatInput.get_text();
+            if (!input || input === UI.THINKING_TEXT) {
+                return;
+            }
+
+            // Display user message
+            this._chatDisplay.displayMessage(MessageRoles.USER, input);
+
+            // Add to history
+            this._history.push({
+                role:    MessageRoles.USER,
+                content: input,
+            });
+
+            // Send to LLM
+            this._sendToLLM();
+
+            // Disable input during processing
+            this._chatInput.set_reactive(false);
+            this._chatInput.set_text(UI.THINKING_TEXT);
+        }
+
+        /**
+        * Handle new conversation button click
+        * @private
+        */
+        _handleNewConversation() {
+            if (this._chatInput.get_text() === UI.NEW_CONVERSATION_TEXT ||
+            this._chatInput.get_text() !== UI.THINKING_TEXT) {
+            // Clear history
+                this._history = [];
+                this._settingsManager.setHistory([]);
+                this._chatDisplay.clear();
+            } else {
+                this._chatDisplay.displayMessage(
+                    MessageRoles.ASSISTANT,
+                    "You can't create a new conversation while I am thinking"
+                );
+            }
+        }
+
+        /**
+        * Handle mouse enter on new conversation button
+        * @private
+        */
+        _handleNewConversationEnter() {
+            if (this._chatInput.get_text() === "") {
+                this._chatInput.set_reactive(false);
+                this._chatInput.set_text(UI.NEW_CONVERSATION_TEXT);
+            }
+        }
+
+        /**
+        * Handle mouse leave on new conversation button
+        * @private
+        */
+        _handleNewConversationLeave() {
+            if (this._chatInput.get_text() === UI.NEW_CONVERSATION_TEXT) {
+                this._chatInput.set_reactive(true);
+                this._chatInput.set_text("");
+            }
             this._focusInputBox();
         }
-    }
 
-    _loadHistory() {
-        this.history = HISTORY
+        /**
+        * Load chat history
+        * @private
+        */
+        _loadHistory() {
+            this._chatInput.set_reactive(false);
+            this._chatInput.set_text(UI.LOADING_HISTORY);
 
-        this.history.forEach(json => {
-            if (json.role == "user") {
-                this.initializeTextBox("humanMessage", convertMD(json.content), BACKGROUND_COLOR_HUMAN_MESSAGE, COLOR_HUMAN_MESSAGE);
-            }
-            else {
-                this.initializeTextBox("llmMessage", convertMD(json.content), BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-            }
-        });
+            this._history = this._settingsManager.getHistory();
+            this._chatDisplay.loadHistory(this._history);
 
-        this.chatInput.set_reactive(true)
-        this.chatInput.set_text("")
-        this._focusInputBox();
-
-        return;
-    }
-
-
-    llmChat() {
-        let apiKey = "";
-        let requestBody = {};
-        let message;
-
-        if (LLM_PROVIDER === "anthropic") {
-            LLM_MODEL = this.extension.settings.get_string("anthropic-model");
-            url = `https://api.anthropic.com/v1/messages`;
-            message = Soup.Message.new('POST', url);
-            apiKey = ANTHROPIC_API_KEY;
-            message.request_headers.append(
-                'x-api-key',
-                apiKey
-            );
-            message.request_headers.append(
-                'anthropic-version',
-                '2023-06-01'
-            );
-
-            requestBody = {
-                "model": LLM_MODEL,
-                "messages": this.history.map(msg => ({
-                    role: msg.role === "user" ? "user" : "assistant",
-                    content: msg.content
-                })),
-                "max_tokens": 1024
-            };
-
-
-        } else if (LLM_PROVIDER === "openai") {
-            LLM_MODEL = this.extension.settings.get_string("openai-model");
-            url = `https://api.openai.com/v1/chat/completions`;
-            apiKey = OPENAI_API_KEY;
-            message = Soup.Message.new('POST', url);
-
-            message.request_headers.append(
-                'Authorization',
-                `Bearer ${apiKey}`
-            );
-
-            requestBody = {
-                "model": LLM_MODEL,
-                "messages": this.history.map(msg => ({
-                    role: msg.role === "user" ? "user" : "assistant",
-                    content: msg.content
-                })),
-                "response_format": {
-                    "type": "text"
-                },
-                "temperature": 1,
-                "max_completion_tokens": 4096,
-                "top_p": 1,
-                "frequency_penalty": 0,
-                "presence_penalty": 0
-            };
-
-
-        } else if (LLM_PROVIDER === "gemini") {
-            LLM_MODEL = this.extension.settings.get_string("gemini-model");
-            url = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-            message = Soup.Message.new('POST', url);
-
-            requestBody = {
-                "contents": this.history.map(msg => ({
-                    role: msg.role === "user" ? "user" : "model",
-                    parts: [{ text: msg.content }]
-                })),
-                "generationConfig": {
-                    "temperature": 1,
-                    "topK": 40,
-                    "topP": 0.95,
-                    "maxOutputTokens": 8192,
-                    "responseMimeType": "text/plain"
-                }
-            };
-        } else if (LLM_PROVIDER === "openrouter") {
-            LLM_MODEL = this.extension.settings.get_string("openrouter-model");
-            url = `https://openrouter.ai/api/v1/chat/completions`;
-            message = Soup.Message.new('POST', url);
-
-            message.request_headers.append(
-                'Authorization',
-                `Bearer ${OPENROUTER_API_KEY}`);
-
-
-            requestBody = {
-                "messages": this.history,
-                "model": OPENROUTER_MODEL
-                
-                }
-            }
-        
-        else {
-
-            url = `https://api.anthropic.com/v1/messages`;
-            apiKey = ANTHROPIC_API_KEY;
-            LLM_MODEL = this.extension.settings.get_string("anthropic-model");
+            this._chatInput.set_reactive(true);
+            this._chatInput.set_text("");
+            this._focusInputBox();
         }
 
+        /**
+        * Send the current conversation to the LLM
+        * @private
+        */
+        _sendToLLM() {
+            const provider = this._settingsManager.getLLMProvider();
+            const apiKey = this._settingsManager.getApiKey(provider);
+            const model = this._settingsManager.getModel(provider);
 
-        message.request_headers.append(
-            'content-type',
-            'application/json'
-        );
+            const llmProvider = LLMProviderFactory.createProvider(provider, apiKey, model);
 
-
-        let body = JSON.stringify(requestBody);
-        let bytes = GLib.Bytes.new(body);
-
-        message.set_request_body_from_bytes('application/json', bytes);
-
-        this._httpSession.send_and_read_async(
-            message,
-            GLib.PRIORITY_DEFAULT,
-            null,
-            (session, result) => {
-                try {
-                    if (message.get_status() === Soup.Status.OK) {
-                        const bytes = session.send_and_read_finish(result);
-                        const decoder = new TextDecoder('utf-8');
-                        const response = JSON.parse(decoder.decode(bytes.get_data()));
-
-                        let assistantMessage = "";
-
-                        if (LLM_PROVIDER === "anthropic") {
-                            assistantMessage = response.content[0].text;
-                        } else if (LLM_PROVIDER === "openai") {
-                            assistantMessage = response.choices[0].message.content;
-                        } else if (LLM_PROVIDER === "gemini") {
-                            assistantMessage = response.candidates[0].content.parts[0].text;
-                        } else if (LLM_PROVIDER === "openrouter") {
-                            assistantMessage = response.choices[0].message.content;
-                        }
-
-
-                        this.history.push({
-                            "role": "assistant",
-                            "content": assistantMessage
-                        });
-
-                        this.initializeTextBox('llmMessage', convertMD(assistantMessage), BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-
-                        // Save updated history
-                        const { settings } = this.extension;
-                        settings.set_string("history", JSON.stringify(this.history));
+            llmProvider.sendRequest(this._history, (error, response) => {
+                if (error) {
+                    let errorMessage;
+                    if (error.message && error.message.includes("HTTP error")) {
+                        errorMessage = formatString(UI.ERROR_API_KEY, provider);
                     } else {
-                        let errorMessage = `Hmm, an error occured when trying to reach out to the assistant.\nCheck your API key and model settings for ${LLM_PROVIDER} and try again. It could also be your internet connection!`;
-                        this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
-
-                        let settingsButton = new St.Button({
-                            label: "Click here to go to settings", can_focus: true,  toggle_mode: true
-                        });
-                    
-                        settingsButton.connect('clicked', (self) => {
-                            this.openSettings();
-                        });
-            
-                        this.chatBox.add_child(settingsButton)
+                        errorMessage = formatString(UI.ERROR_GENERIC, error.toString());
                     }
-                } catch (error) {
-                    let errorMessage = `We are having trouble getting a response from the assistant. \nHere is the error - if it helps at all: \n\n${error} \n\nSome tips:\n\n- Check your internet connection\n- If you recently changed your provider, try deleting your history.`;
-                    this.initializeTextBox('llmMessage', errorMessage, BACKGROUND_COLOR_LLM_MESSAGE, COLOR_LLM_MESSAGE);
 
-                    let settingsButton = new St.Button({
-                        label: "Click here to go to settings", can_focus: true,  toggle_mode: true
-                    });
-                
-                    settingsButton.connect('clicked', (self) => {
-                        this.openSettings();
-                    });
-        
-                    this.chatBox.add_child(settingsButton)
-
+                    this._chatDisplay.displayError(errorMessage, true);
                     logError(error);
+                } else {
+                // Display the response
+                    this._chatDisplay.displayMessage(MessageRoles.ASSISTANT, response);
+
+                    // Add to history
+                    this._history.push({
+                        role:    MessageRoles.ASSISTANT,
+                        content: response,
+                    });
+
+                    // Save updated history
+                    this._settingsManager.setHistory(this._history);
                 }
 
-                this.chatInput.set_reactive(true);
-                this.chatInput.set_text("");
+                // Re-enable input
+                this._chatInput.set_reactive(true);
+                this._chatInput.set_text("");
+                this._focusInputBox();
+            });
+        }
+
+        /**
+        * Set up keyboard shortcut
+        * @private
+        */
+        _bindShortcut() {
+            const shortcut = this._settingsManager.getOpenChatShortcut();
+            setupShortcut(shortcut, this._extension.settings, this._toggleChatWindow.bind(this));
+        }
+
+        /**
+        * Remove keyboard shortcut
+        * @private
+        */
+        _unbindShortcut() {
+            removeShortcut();
+        }
+
+        /**
+        * Focus the input box after a short delay
+        * @private
+        */
+        _focusInputBox() {
+            if (this._timeoutFocusInputBox) {
+                GLib.Source.remove(this._timeoutFocusInputBox);
+            }
+
+            this._timeoutFocusInputBox = focusInput(this._chatInput);
+        }
+
+        /**
+        * Toggle the chat window open/closed
+        * @private
+        */
+        _toggleChatWindow() {
+            if (this.menu.isOpen) {
+                this.menu.close();
+            } else {
+                this.menu.open();
                 this._focusInputBox();
             }
-        );
-
-        return;
-    }
-
-    initializeTextBox(type, text, color, textColor) {
-        let box = new St.BoxLayout({
-            vertical: true,
-            style_class: `${type}-box`
-        });
-
-        // text has to be a string
-        let label = new St.Label({
-            style_class: type,
-            style: `background-color: ${color}; color: ${textColor}`,
-            y_expand: true,
-            reactive: true
-        });
-
-        label.clutter_text.single_line_mode = false;
-        label.clutter_text.line_wrap        = true;
-        label.clutter_text.line_wrap_mode   = Pango.WrapMode.WORD_CHAR;
-        label.clutter_text.ellipsize        = Pango.EllipsizeMode.NONE;
-
-        box.add_child(label)
-
-        if(type != 'humanMessage') {
-            label.connect('button-press-event', (actor) => {
-                this.extension.clipboard.set_text(St.ClipboardType.CLIPBOARD, label.clutter_text.get_text());
-            });
-
-
-
-            label.connect('enter-event', (actor) => {
-
-
-                if (this.chatInput.get_text() == "") {
-                    this.timeoutCopy = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 0.4, () => {
-                        this.chatInput.set_reactive(false);
-                        this.chatInput.set_text("Click on text to copy");});
-                }
-            });
-
-            label.connect('leave-event', (actor) => {
-                if (this.timeoutCopy) {
-                    GLib.Source.remove(this.timeoutCopy);
-                    this.timeoutCopy = null;
-                }
-
-                if (this.chatInput.get_text() == "Click on text to copy") {
-                    this.chatInput.set_reactive(true);
-                    this.chatInput.set_text("");
-                
-                }
-
-                this._focusInputBox();
-            });
-
         }
 
-        label.clutter_text.set_markup(text);
-        this.chatBox.add_child(box);
-    }
-
-    openSettings () {
-        this.extension.openSettings();
-    }
-
-    destroy() {
-        if (this.timeoutCopy) {
-            GLib.Source.remove(this.timeoutCopy);
-            this.timeoutCopy = null;
+        /**
+        * Open extension settings
+        * @private
+        */
+        _openSettings() {
+            this._extension.openPreferences();
         }
 
-        if (this.timeoutResponse) {
-            GLib.Source.remove(this.timeoutResponse);
-            this.timeoutResponse = null;
+        /**
+        * Clean up resources
+        */
+        destroy() {
+            if (this._timeoutResponse) {
+                GLib.Source.remove(this._timeoutResponse);
+                this._timeoutResponse = null;
+            }
+
+            if (this._timeoutFocusInputBox) {
+                GLib.Source.remove(this._timeoutFocusInputBox);
+                this._timeoutFocusInputBox = null;
+            }
+
+            this._unbindShortcut();
+            this._settingsManager.disconnectAll();
+            this._chatDisplay.destroy();
+
+            super.destroy();
         }
+    });
 
-        this._unbindShortcut();
-        this._httpSession?.abort();
-        if (this.timeoutFocusInputBox) {
-            GLib.Source.remove(this.timeoutFocusInputBox);
-            this.timeoutFocusInputBox = null;
-        }
-        HISTORY = null;
-        super.destroy();
-    }
-
-});
-
+/**
+ * Extension entry point class
+ */
 export default class PenguinExtension extends Extension {
     enable() {
         this._penguin = new Penguin({
-            settings: this.getSettings(),
-            clipboard: St.Clipboard.get_default(),
+            settings:     this.getSettings(),
             openSettings: this.openPreferences,
-            uuid: this.uuid
+            clipboard:    St.Clipboard.get_default(),
+            uuid:         this.uuid,
         });
 
         Main.panel.addToStatusArea(this.uuid, this._penguin);
     }
+
     disable() {
         this._penguin.destroy();
         this._penguin = null;
