@@ -67,7 +67,7 @@ module.exports = {
         }],
         "no-undef":         ["off"],
         "max-len":          ["off"],
-        "camelcase":        ["warn"],
+        "camelcase":        ["off"],
         "no-var":           ["warn"],
         "spaced-comment":   ["off"],
         "new-cap":          ["off"],
@@ -148,7 +148,7 @@ module.exports = {
         // 'dot-location': 0,
         // 'dot-notation': 0,
         // 'eqeqeq': 0,
-        "guard-for-in":                 2,
+        "guard-for-in":                 1,
         // 'no-alert': 0,
         "no-caller":                    2,
         // 'no-case-declarations': 2, // eslint:recommended
