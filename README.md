@@ -3,18 +3,8 @@ GNOME Linux user 👣? Download the extension [here](https://extensions.gnome.or
 ---
 # Penguin: AI Chatbot 🐧
 
-An assistant interface for GNOME powered by LLM APIs. Supports Anthropic, OpenAI, and Gemini.
+An assistant interface for GNOME powered by LLM APIs. Supports OpenRouter, Anthropic, OpenAI, and Gemini.
 
->
-> ### **TODO** ✅:
->
-> *   Automatically focus the input field on window open
-> *   Enable partial message selection (remove left-click copy)
-> *   Implement streaming responses
-> *   Allow chat window resizing
-> *   Add a provider selector in the chat window
-> *   Show a chat history selector
-> *   Add quick copy buttons for code blocks
 
 # Download & Installation
 
