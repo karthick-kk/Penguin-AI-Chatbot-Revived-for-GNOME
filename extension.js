@@ -13,6 +13,7 @@ import GObject from "gi://GObject";
 import St from "gi://St";
 import GLib from "gi://GLib";
 
+
 import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
@@ -23,6 +24,7 @@ import { LLMProviderFactory } from "./lib/llmProviders.js";
 import { ChatMessageDisplay } from "./lib/chatUI.js";
 import { setupShortcut, removeShortcut, formatString, focusInput } from "./lib/utils.js";
 import { MessageRoles, CSS, UI } from "./lib/constants.js";
+import { hideTooltip, showTooltip } from "./lib/tooltip.js";
 
 /**
  * Main extension class that handles the chat interface
@@ -214,10 +216,7 @@ const Penguin = GObject.registerClass(
         * @private
         */
         _handleNewConversationEnter() {
-            if (this._chatInput.get_text() === "") {
-                this._chatInput.set_reactive(false);
-                this._chatInput.set_text(UI.NEW_CONVERSATION_TEXT);
-            }
+            showTooltip("New conversation (Deletes current)");
         }
 
         /**
@@ -225,11 +224,7 @@ const Penguin = GObject.registerClass(
         * @private
         */
         _handleNewConversationLeave() {
-            if (this._chatInput.get_text() === UI.NEW_CONVERSATION_TEXT) {
-                this._chatInput.set_reactive(true);
-                this._chatInput.set_text("");
-            }
-            this._focusInputBox();
+            hideTooltip();
         }
 
         /**
