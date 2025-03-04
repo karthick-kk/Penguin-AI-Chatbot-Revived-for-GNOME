@@ -24,7 +24,7 @@ import { LLMProviderFactory } from "./lib/llmProviders.js";
 import { ChatMessageDisplay } from "./lib/chatUI.js";
 import { setupShortcut, removeShortcut, formatString, focusInput } from "./lib/utils.js";
 import { MessageRoles, CSS, UI } from "./lib/constants.js";
-import { hideTooltip, showTooltip } from "./lib/tooltip.js";
+import {hideTooltip, showTooltip } from "./lib/tooltip.js";
 
 /**
  * Main extension class that handles the chat interface
@@ -353,6 +353,7 @@ const Penguin = GObject.registerClass(
             this._unbindShortcut();
             this._settingsManager.disconnectAll();
             this._chatDisplay.destroy();
+            hideTooltip();
 
             super.destroy();
         }
