@@ -248,13 +248,10 @@ const Penguin = GObject.registerClass(
         * @private
         */
         _sendToLLM() {
-            console.log(`[Extension] _sendToLLM method called`);
             const provider = this._settingsManager.getLLMProvider();
             const apiKey = this._settingsManager.getApiKey(provider);
             const model = this._settingsManager.getModel(provider);
             const timeout = this._settingsManager.getRequestTimeout();
-            console.log(`[Extension] Using provider: ${provider}, model: ${model}, timeout: ${timeout}s`);
-
             const llmProvider = LLMProviderFactory.createProvider(provider, apiKey, model);
             // Set the configured timeout
             llmProvider.setTimeout(timeout);

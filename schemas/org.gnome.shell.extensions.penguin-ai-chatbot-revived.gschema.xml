@@ -1,6 +1,6 @@
 <schemalist gettext-domain="gnome-shell-extensions">
-  <schema id="org.gnome.shell.extensions.penguin-ai-chatbot"
-      path="/org/gnome/shell/extensions/penguin-ai-chatbot/">
+  <schema id="org.gnome.shell.extensions.penguin-ai-chatbot-revived"
+      path="/org/gnome/shell/extensions/penguin-ai-chatbot-revived/">
 
 
 
