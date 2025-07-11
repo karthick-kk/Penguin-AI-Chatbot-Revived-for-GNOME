@@ -1,4 +1,3 @@
-
 /**
  * Preferences for Penguin AI Chatbot
  *
@@ -51,6 +50,7 @@ class SettingsUI {
         this._createProviderSection();
         this._createAPIKeySection();
         this._createModelSection();
+        this._createTimeoutSection();
         this._createShortcutSection();
         this._createColorSection();
         this._createSaveSection();
@@ -95,6 +95,7 @@ class SettingsUI {
         this.defaultOpenAIModel = this.schema.get_string(SettingsKeys.OPENAI_MODEL);
         this.defaultGeminiModel = this.schema.get_string(SettingsKeys.GEMINI_MODEL);
         this.defaultOpenRouterModel = this.schema.get_string(SettingsKeys.OPENROUTER_MODEL);
+        this.defaultOllamaModel = this.schema.get_string(SettingsKeys.OLLAMA_MODEL);
 
         // Colors
         this.defaultHumanColor = this.schema.get_string(SettingsKeys.HUMAN_MESSAGE_COLOR);
@@ -104,6 +105,9 @@ class SettingsUI {
 
         // Shortcut
         this.defaultShortcut = this.schema.get_strv(SettingsKeys.OPEN_CHAT_SHORTCUT)[0];
+
+        // Timeout
+        this.defaultTimeout = this.schema.get_int(SettingsKeys.REQUEST_TIMEOUT);
     }
 
     /**
@@ -122,6 +126,7 @@ class SettingsUI {
         providerList.append(_("OpenAI"));
         providerList.append(_("Gemini"));
         providerList.append(_("OpenRouter"));
+        providerList.append(_("Ollama"));
 
         this.provider = new Gtk.DropDown({
             model:      providerList,
@@ -135,6 +140,7 @@ class SettingsUI {
             LLMProviders.OPENAI,
             LLMProviders.GEMINI,
             LLMProviders.OPENROUTER,
+            LLMProviders.OLLAMA,
         ];
 
         for (let i = 0; i < providers.length; i++) {
@@ -327,6 +333,24 @@ class SettingsUI {
             uri:   "https://openrouter.ai/models",
         });
 
+        // Ollama Model
+        const labelOllamaModel = new Gtk.Label({
+            label:        _("Ollama Model:"),
+            halign:       Gtk.Align.START,
+            tooltip_text: _("Specify the Ollama model you want to use. Example: llama2"),
+        });
+
+        this.ollamaModel = new Gtk.Entry({
+            buffer: new Gtk.EntryBuffer(),
+        });
+        this.ollamaModel.set_placeholder_text(_("e.g., llama2"));
+        this.ollamaModel.set_text(this.defaultOllamaModel);
+
+        const howToOllamaModel = new Gtk.LinkButton({
+            label: _("Available Ollama Models"),
+            uri:   "https://ollama.com/models",
+        });
+
         // Add to grid
         this.main.attach(labelModel, 0, 5, 1, 1);
         this.main.attach(this.model, 2, 5, 2, 1);
@@ -343,6 +367,46 @@ class SettingsUI {
         this.main.attach(labelOpenRouterModel, 0, 8, 1, 1);
         this.main.attach(this.openRouterModel, 2, 8, 2, 1);
         this.main.attach(howToOpenRouterModel, 4, 8, 1, 1);
+
+        this.main.attach(labelOllamaModel, 0, 9, 1, 1);
+        this.main.attach(this.ollamaModel, 2, 9, 2, 1);
+        this.main.attach(howToOllamaModel, 4, 9, 1, 1);
+    }
+
+    /**
+     * Create the timeout configuration section
+     * @private
+     */
+    _createTimeoutSection() {
+        const labelTimeout = new Gtk.Label({
+            label:        _("Request Timeout (seconds):"),
+            halign:       Gtk.Align.START,
+            tooltip_text: _("Timeout for LLM API requests in seconds. Increase for slower models or reasoning models that take longer to respond."),
+        });
+
+        this.timeout = new Gtk.SpinButton({
+            adjustment: new Gtk.Adjustment({
+                lower:          30,     // Minimum 30 seconds
+                upper:          1800,   // Maximum 30 minutes  
+                step_increment: 30,     // Step by 30 seconds
+                page_increment: 60,     // Page step by 1 minute
+                value:          300,    // Default 5 minutes
+            }),
+            climb_rate: 1,
+            digits:     0,
+        });
+        this.timeout.set_value(this.defaultTimeout);
+
+        const timeoutInfo = new Gtk.Label({
+            label:        _("30-1800 seconds"),
+            halign:       Gtk.Align.START,
+            tooltip_text: _("Reasoning models (like deepseek-r1) may need 5-10 minutes."),
+        });
+
+        // Add to grid
+        this.main.attach(labelTimeout, 0, 10, 1, 1);
+        this.main.attach(this.timeout, 2, 10, 1, 1);
+        this.main.attach(timeoutInfo, 3, 10, 1, 1);
     }
 
     /**
@@ -350,87 +414,66 @@ class SettingsUI {
      * @private
      */
     _createColorSection() {
-        // Set up color dialog
-        this.colorDialog = new Gtk.ColorDialog({
-            with_alpha: false,
-        });
+        // Helper to create a color preview row using Gtk.ColorButton
+        const createColorRow = (defaultColor, labelText, tooltip, row, onColorChanged) => {
+            const label = new Gtk.Label({
+                label: labelText,
+                halign: Gtk.Align.START,
+                tooltip_text: tooltip,
+            });
+            // Correct RGBA parsing
+            let rgba = new Gdk.RGBA();
+            rgba.parse(defaultColor);
+            const colorButton = new Gtk.ColorButton({
+                rgba: rgba,
+                use_alpha: false,
+                tooltip_text: tooltip,
+            });
+            colorButton.connect('color-set', () => {
+                const rgba = colorButton.get_rgba();
+                const colorStr = rgba.to_string();
+                if (onColorChanged) onColorChanged(colorStr);
+            });
+            this.main.attach(label, 0, row, 1, 1);
+            this.main.attach(colorButton, 2, row, 1, 1);
+            return colorButton;
+        };
 
         // Human Message Background Color
-        const labelHumanColor = new Gtk.Label({
-            label:        _("Your Message Background Color:"),
-            halign:       Gtk.Align.START,
-            tooltip_text: _("Select the background color for your messages."),
-        });
-
-        this.humanColor = new Gtk.ColorDialogButton({
-            valign: Gtk.Align.CENTER,
-            dialog: this.colorDialog,
-        });
-
-        const humanColorGTK = this.humanColor.rgba;
-        humanColorGTK.parse(this.defaultHumanColor);
-        this.humanColor.set_rgba(humanColorGTK);
+        this.humanColorButton = createColorRow(
+            this.defaultHumanColor,
+            _("Your Message Background Color:"),
+            _("Select the background color for your messages."),
+            11,
+            (color) => { this.humanColorValue = color; }
+        );
 
         // Human Message Text Color
-        const labelHumanTextColor = new Gtk.Label({
-            label:        _("Your Message Text Color:"),
-            halign:       Gtk.Align.START,
-            tooltip_text: _("Select the text color for your messages."),
-        });
-
-        this.humanTextColor = new Gtk.ColorDialogButton({
-            valign: Gtk.Align.CENTER,
-            dialog: this.colorDialog,
-        });
-
-        const humanTextColorGTK = this.humanTextColor.rgba;
-        humanTextColorGTK.parse(this.defaultHumanTextColor);
-        this.humanTextColor.set_rgba(humanTextColorGTK);
+        this.humanTextColorButton = createColorRow(
+            this.defaultHumanTextColor,
+            _("Your Message Text Color:"),
+            _("Select the text color for your messages."),
+            12,
+            (color) => { this.humanTextColorValue = color; }
+        );
 
         // LLM Message Background Color
-        const labelLLMColor = new Gtk.Label({
-            label:        _("Chatbot Message Background Color:"),
-            halign:       Gtk.Align.START,
-            tooltip_text: _("Select the background color for the chatbot's messages."),
-        });
-
-        this.llmColor = new Gtk.ColorDialogButton({
-            valign: Gtk.Align.CENTER,
-            dialog: this.colorDialog,
-        });
-
-        const llmColorGTK = this.llmColor.rgba;
-        llmColorGTK.parse(this.defaultLLMColor);
-        this.llmColor.set_rgba(llmColorGTK);
+        this.llmColorButton = createColorRow(
+            this.defaultLLMColor,
+            _("Chatbot Message Background Color:"),
+            _("Select the background color for the chatbot's messages."),
+            13,
+            (color) => { this.llmColorValue = color; }
+        );
 
         // LLM Message Text Color
-        const labelLLMTextColor = new Gtk.Label({
-            label:        _("Chatbot Message Text Color:"),
-            halign:       Gtk.Align.START,
-            tooltip_text: _("Select the text color for the chatbot's messages."),
-        });
-
-        this.llmTextColor = new Gtk.ColorDialogButton({
-            valign: Gtk.Align.CENTER,
-            dialog: this.colorDialog,
-        });
-
-        const llmTextColorGTK = this.llmTextColor.rgba;
-        llmTextColorGTK.parse(this.defaultLLMTextColor);
-        this.llmTextColor.set_rgba(llmTextColorGTK);
-
-        // Add to grid
-        this.main.attach(labelHumanColor, 0, 9, 1, 1);
-        this.main.attach(this.humanColor, 2, 9, 2, 1);
-
-        this.main.attach(labelHumanTextColor, 0, 10, 1, 1);
-        this.main.attach(this.humanTextColor, 2, 10, 2, 1);
-
-        this.main.attach(labelLLMColor, 0, 11, 1, 1);
-        this.main.attach(this.llmColor, 2, 11, 2, 1);
-
-        this.main.attach(labelLLMTextColor, 0, 12, 1, 1);
-        this.main.attach(this.llmTextColor, 2, 12, 2, 1);
+        this.llmTextColorButton = createColorRow(
+            this.defaultLLMTextColor,
+            _("Chatbot Message Text Color:"),
+            _("Select the text color for the chatbot's messages."),
+            14,
+            (color) => { this.llmTextColorValue = color; }
+        );
     }
 
     /**
@@ -490,9 +533,9 @@ class SettingsUI {
         });
 
         // Add to grid
-        this.main.attach(labelShortcut, 0, 13, 1, 1);
-        this.main.attach(this.shortcutLabel, 2, 13, 1, 1);
-        this.main.attach(this.shortcutButton, 3, 13, 1, 1);
+        this.main.attach(labelShortcut, 0, 15, 1, 1);
+        this.main.attach(this.shortcutLabel, 2, 15, 1, 1);
+        this.main.attach(this.shortcutButton, 3, 15, 1, 1);
     }
 
     /**
@@ -513,8 +556,8 @@ class SettingsUI {
         this.saveButton.connect("clicked", () => this._saveSettings());
 
         // Add to grid
-        this.main.attach(this.saveButton, 2, 14, 1, 1);
-        this.main.attach(this.statusLabel, 0, 15, 4, 1);
+        this.main.attach(this.saveButton, 2, 16, 1, 1);
+        this.main.attach(this.statusLabel, 0, 17, 4, 1);
     }
 
     /**
@@ -528,6 +571,7 @@ class SettingsUI {
             LLMProviders.OPENAI,
             LLMProviders.GEMINI,
             LLMProviders.OPENROUTER,
+            LLMProviders.OLLAMA,
         ];
         const selectedProvider = providerList[this.provider.get_selected()];
 
@@ -545,19 +589,24 @@ class SettingsUI {
         this.schema.set_string(SettingsKeys.OPENAI_MODEL, this.openaiModel.get_buffer().get_text());
         this.schema.set_string(SettingsKeys.GEMINI_MODEL, this.geminiModel.get_buffer().get_text());
         this.schema.set_string(SettingsKeys.OPENROUTER_MODEL, this.openRouterModel.get_buffer().get_text());
+        this.schema.set_string(SettingsKeys.OLLAMA_MODEL, this.ollamaModel.get_buffer().get_text());
 
         // Save colors
-        this.schema.set_string(SettingsKeys.HUMAN_MESSAGE_COLOR, `${this.humanColor.get_rgba().to_string()}`);
-        this.schema.set_string(SettingsKeys.LLM_MESSAGE_COLOR, `${this.llmColor.get_rgba().to_string()}`);
-        this.schema.set_string(SettingsKeys.HUMAN_MESSAGE_TEXT_COLOR, `${this.humanTextColor.get_rgba().to_string()}`);
-        this.schema.set_string(SettingsKeys.LLM_MESSAGE_TEXT_COLOR, `${this.llmTextColor.get_rgba().to_string()}`);
+        this.schema.set_string(SettingsKeys.HUMAN_MESSAGE_COLOR, this.humanColorValue || this.defaultHumanColor);
+        this.schema.set_string(SettingsKeys.LLM_MESSAGE_COLOR, this.llmColorValue || this.defaultLLMColor);
+        this.schema.set_string(SettingsKeys.HUMAN_MESSAGE_TEXT_COLOR, this.humanTextColorValue || this.defaultHumanTextColor);
+        this.schema.set_string(SettingsKeys.LLM_MESSAGE_TEXT_COLOR, this.llmTextColorValue || this.defaultLLMTextColor);
 
-        // Update status
-        this.statusLabel.set_markup(_("Preferences Saved"));
+        // Save shortcut
+        this.schema.set_strv(SettingsKeys.OPEN_CHAT_SHORTCUT, [this.shortcutLabel.accelerator]);
 
-        // Reset status after a delay
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3, () => {
-            this.statusLabel.set_markup(_("Click 'Save Preferences' to apply your changes."));
+        // Save timeout
+        this.schema.set_int(SettingsKeys.REQUEST_TIMEOUT, this.timeout.get_value());
+
+        // Show success message
+        this.statusLabel.set_label(_("Preferences saved successfully!"));
+        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
+            this.statusLabel.set_label(_("Click 'Save Preferences' to apply your changes."));
             return GLib.SOURCE_REMOVE;
         });
     }

@@ -248,42 +248,127 @@ const Penguin = GObject.registerClass(
         * @private
         */
         _sendToLLM() {
+            console.log(`[Extension] _sendToLLM method called`);
             const provider = this._settingsManager.getLLMProvider();
             const apiKey = this._settingsManager.getApiKey(provider);
             const model = this._settingsManager.getModel(provider);
+            const timeout = this._settingsManager.getRequestTimeout();
+            console.log(`[Extension] Using provider: ${provider}, model: ${model}, timeout: ${timeout}s`);
 
             const llmProvider = LLMProviderFactory.createProvider(provider, apiKey, model);
+            // Set the configured timeout
+            llmProvider.setTimeout(timeout);
+            console.log(`[Extension] Created LLM provider: ${llmProvider.constructor.name}`);
 
-            llmProvider.sendRequest(this._history, (error, response) => {
+            // Create a global test function to see if the issue is with callback context
+            global.testCallbackFunction = (error, response) => {
+                console.log("GLOBAL TEST CALLBACK REACHED!!!");
+                log("GLOBAL TEST CALLBACK REACHED!!!");
+                console.log(`Global callback - error: ${error}, response: ${response ? response.substring(0, 50) : 'NULL'}`);
+            };
+
+            // Store references for the callback
+            const chatDisplay = this._chatDisplay;
+            const chatInput = this._chatInput;
+            const history = this._history;
+            const settingsManager = this._settingsManager;
+            const focusInputBox = this._focusInputBox.bind(this);
+
+            // Test if simple callbacks work at all
+            const testCallback = function(error, response) {
+                console.log("=== TEST CALLBACK EXECUTED ===");
+                log("=== TEST CALLBACK EXECUTED ===");
+            };
+            
+            // Test the callback directly
+            try {
+                console.log("Testing callback directly...");
+                testCallback(null, "test");
+                console.log("Direct callback test successful");
+            } catch (e) {
+                console.log(`Direct callback test failed: ${e}`);
+            }
+
+            // Store result globally for polling-based approach
+            global.llmResult = null;
+            global.llmError = null;
+            global.llmPending = true;
+
+            // Extremely simple callback that just stores the result
+            const simpleCallback = function(error, response) {
+                console.log("=== SIMPLE CALLBACK START ===");
+                log("=== SIMPLE CALLBACK START ===");
+                try {
+                    global.llmError = error;
+                    global.llmResult = response;
+                    global.llmPending = false;
+                    console.log(`Stored result: error=${!!error}, response length=${response ? response.length : 0}`);
+                } catch (e) {
+                    console.log(`Error in simple callback: ${e.message}`);
+                }
+                console.log("=== SIMPLE CALLBACK END ===");
+            };
+
+            // Robust callback with logging and blank response fallback
+            const callback = function(error, response) {
+                console.log("[Extension] Callback entered");
+                log(`[Extension] Callback entered`);
                 if (error) {
-                    let errorMessage;
-                    if (error.message && error.message.includes("HTTP error")) {
-                        errorMessage = formatString(UI.ERROR_API_KEY, provider);
+                    log(`[Extension] Callback error: ${error}`);
+                    chatDisplay.displayError(error.toString(), true);
+                } else {
+                    log(`[Extension] Callback response length: ${response ? response.length : 'NULL'}`);
+                    log(`[Extension] Callback response preview: ${response ? response.substring(0, 200) : 'NULL'}`);
+                    if (!response || !response.trim()) {
+                        log(`[Extension] Response is blank or whitespace. Displaying placeholder.`);
+                        chatDisplay.displayMessage('assistant', '[No response or blank output from LLM]');
                     } else {
-                        errorMessage = formatString(UI.ERROR_GENERIC, error.toString());
+                        chatDisplay.displayMessage('assistant', response);
+                    }
+                    // Add to history
+                    history.push({ role: 'assistant', content: response });
+                    settingsManager.setHistory(history);
+                }
+                chatInput.set_reactive(true);
+                chatInput.set_text("");
+                focusInputBox();
+            };
+            llmProvider.sendRequest(this._history, callback);
+            console.log(`[Extension] sendRequest method called, waiting for callback`);
+
+            // Poll for result using GLib timeout
+            const checkResult = () => {
+                console.log("Checking for LLM result...");
+                if (!global.llmPending) {
+                    console.log("Result received! Processing...");
+                    if (global.llmError) {
+                        console.log(`Processing error: ${global.llmError}`);
+                        this._chatDisplay.displayError(global.llmError.toString(), true);
+                    } else {
+                        console.log(`Processing response: ${global.llmResult ? global.llmResult.length : 0} chars`);
+                        this._chatDisplay.displayMessage(MessageRoles.ASSISTANT, global.llmResult);
+                        
+                        // Add to history
+                        this._history.push({
+                            role: MessageRoles.ASSISTANT,
+                            content: global.llmResult,
+                        });
+                        this._settingsManager.setHistory(this._history);
                     }
 
-                    this._chatDisplay.displayError(errorMessage, true);
-                    logError(error);
+                    // Re-enable input
+                    this._chatInput.set_reactive(true);
+                    this._chatInput.set_text("");
+                    this._focusInputBox();
+                    
+                    return GLib.SOURCE_REMOVE;
                 } else {
-                // Display the response
-                    this._chatDisplay.displayMessage(MessageRoles.ASSISTANT, response);
-
-                    // Add to history
-                    this._history.push({
-                        role:    MessageRoles.ASSISTANT,
-                        content: response,
-                    });
-
-                    // Save updated history
-                    this._settingsManager.setHistory(this._history);
+                    return GLib.SOURCE_CONTINUE;
                 }
+            };
 
-                // Re-enable input
-                this._chatInput.set_reactive(true);
-                this._chatInput.set_text("");
-                this._focusInputBox();
-            });
+            // Start polling every 500ms
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, checkResult);
         }
 
         /**
